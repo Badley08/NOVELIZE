@@ -201,8 +201,9 @@ fun LibraryScreen(
                         Spacer(modifier = Modifier.width(16.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
+                            val bannerPercent = (latestBook.readingProgressPercent * 100).toInt()
                             Text(
-                                text = "CONTINUE READING",
+                                text = if (bannerPercent > 0) "CONTINUE READING • $bannerPercent%" else "START READING",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = BrandPurple
@@ -222,7 +223,7 @@ fun LibraryScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             LinearProgressIndicator(
-                                progress = { 0.35f },
+                                progress = { latestBook.readingProgressPercent.coerceIn(0f, 1f) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(6.dp)
@@ -432,8 +433,9 @@ private fun BookCard(
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    val percentInt = (book.readingProgressPercent * 100).toInt()
                     Text(
-                        text = "Ready",
+                        text = if (percentInt > 0) "$percentInt%" else "Ready",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = BrandPurple
@@ -441,7 +443,7 @@ private fun BookCard(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 LinearProgressIndicator(
-                    progress = { 0.25f },
+                    progress = { book.readingProgressPercent.coerceIn(0f, 1f) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp)

@@ -286,6 +286,28 @@ fun ReaderScreen(
                     }
                 }
             }
+
+            // Floating "Back to where I stopped" quick resume button
+            val isScrolledAway = listState.firstVisibleItemIndex != narrationState.currentParagraphIndex
+            if (isScrolledAway) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(narrationState.currentParagraphIndex)
+                        }
+                    },
+                    containerColor = BrandPurple,
+                    contentColor = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 16.dp, end = 16.dp),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Back to narration (¶${narrationState.currentParagraphIndex + 1})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 
@@ -479,6 +501,7 @@ fun ReaderScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ParagraphView(
     paragraph: Paragraph,
@@ -537,7 +560,7 @@ private fun ParagraphView(
             }
         }
 
-        // Render sentences with karaoke highlight support
+        // Render sentences with karaoke highlight support and word-level interaction
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Start
@@ -545,26 +568,35 @@ private fun ParagraphView(
             paragraph.sentences.forEachIndexed { sIndex, sentence ->
                 val isSentenceActive = (pIndex == activeParagraphIndex && sIndex == activeSentenceIndex && isPlaying)
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (isSentenceActive) karaokeColor else Color.Transparent)
-                        .clickable { onSentenceClick(sIndex) }
-                        .combinedClickable(
-                            onClick = { onSentenceClick(sIndex) },
-                            onLongClick = { onWordLongPress(sentence.text.split(" ").firstOrNull() ?: sentence.text) }
-                        )
-                        .padding(horizontal = 2.dp, vertical = 2.dp)
+                Surface(
+                    color = if (isSentenceActive) karaokeColor else Color.Transparent,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.padding(vertical = 1.dp)
                 ) {
-                    Text(
-                        text = sentence.text + " ",
-                        fontSize = fontSizeSp.sp,
-                        lineHeight = (fontSizeSp * 1.5f).sp,
-                        fontWeight = if (isSentenceActive) FontWeight.SemiBold else FontWeight.Normal,
-                        fontStyle = if (isDialogue) FontStyle.Italic else FontStyle.Normal,
-                        color = if (isSentenceActive) BrandPurple else textColor,
-                        textDecoration = if (isUserUnderlined) TextDecoration.Underline else TextDecoration.None
-                    )
+                    FlowRow(modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp)) {
+                        val words = sentence.text.split(Regex("\\s+"))
+                        words.forEach { word ->
+                            val cleanWord = word.trim()
+                            if (cleanWord.isNotEmpty()) {
+                                Text(
+                                    text = "$cleanWord ",
+                                    fontSize = fontSizeSp.sp,
+                                    lineHeight = (fontSizeSp * 1.55f).sp,
+                                    fontWeight = if (isSentenceActive) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontStyle = if (isDialogue) FontStyle.Italic else FontStyle.Normal,
+                                    color = if (isSentenceActive) BrandPurple else textColor,
+                                    textDecoration = if (isUserUnderlined) TextDecoration.Underline else TextDecoration.None,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .combinedClickable(
+                                            onClick = { onSentenceClick(sIndex) },
+                                            onLongClick = { onWordLongPress(cleanWord) }
+                                        )
+                                        .padding(horizontal = 1.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

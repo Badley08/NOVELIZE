@@ -90,21 +90,23 @@ NoveLize follows a strict **Neutral Client** model:
 
 ---
 
-## Roadmap
+## Implementation Progress & Roadmap
 
-- [ ] Finalize the design: UI mockups and the SFX source
-- [ ] Project scaffolding (Kotlin, Compose, Room, Media3)
-- [ ] File import: EPUB, TXT, PDF, DOCX
-- [ ] Multi-voice narration with speaker detection
-- [ ] Smart resume and long-press menu
-- [ ] Sound design engine
-- [ ] Highlighting
-- [ ] Background playback and sleep timer
-- [ ] Themes (including dynamic book themes), fonts, library with covers, EPUB illustrations
-- [ ] Offline translation
-- [ ] Chapter quizzes
-- [ ] First-run wizard and demo stories
-- [ ] First public release (v1)
+- [x] Vector branding, launcher adaptive icons, and physics-based spring animations
+- [x] Scaffolding: Jetpack Compose, Material 3, Navigation, Coroutines & StateFlow
+- [x] Universal document import: offline DRM-free EPUB, TXT, PDF, and DOCX parsers
+- [x] Dialogue segmentation & automated multi-voice profile allocation (Lead, Female, Male, Supporting, Narrator)
+- [x] Smart resume: exact word, sentence, and chapter position stored in persistent storage with floating resume button
+- [x] Word-level long-press contextual actions: offline translation, stop bookmarking, color highlights, underlines
+- [x] Contextual sound design engine: real-time SFX triggers and acoustic playback
+- [x] Synchronized karaoke sentence progression with visual progress tracking
+- [x] Sleep timer and uninterrupted background playback support
+- [x] Reading comfort: Light, Sepia, Night, and Dynamic Cover themes with adjustable font size
+- [x] Bidirectional offline translation service (English ⇄ French)
+- [x] Dynamic on-device NLP comprehension quiz generation for any user-imported novel
+- [x] First-run onboarding wizard with optimal-use hardware guidelines and built-in demo story
+- [x] Automated self-updater directly from GitHub Releases (detection, progress download, FileProvider APK installer)
+- [ ] High-fidelity on-demand neural voice pack downloads (Sherpa-ONNX / Kokoro)
 
 ---
 

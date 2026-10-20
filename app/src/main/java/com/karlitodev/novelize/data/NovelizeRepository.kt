@@ -131,6 +131,7 @@ class DefaultNovelizeRepository(
                         filePath = obj.getString("filePath"),
                         language = obj.optString("lang", "en"),
                         totalChapters = obj.getInt("totalChapters"),
+                        readingProgressPercent = obj.optDouble("progressPercent", 0.0).toFloat(),
                         lastReadTimestamp = obj.optLong("lastRead", System.currentTimeMillis())
                     )
                 )
@@ -157,6 +158,7 @@ class DefaultNovelizeRepository(
                     obj.put("filePath", b.filePath)
                     obj.put("lang", b.language)
                     obj.put("totalChapters", b.totalChapters)
+                    obj.put("progressPercent", b.readingProgressPercent.toDouble())
                     obj.put("lastRead", b.lastReadTimestamp)
                     array.put(obj)
                 }
@@ -319,7 +321,8 @@ class DefaultNovelizeRepository(
         val index = currentList.indexOfFirst { it.id == progress.bookId }
         if (index != -1) {
             currentList[index] = currentList[index].copy(
-                lastReadTimestamp = System.currentTimeMillis()
+                lastReadTimestamp = System.currentTimeMillis(),
+                readingProgressPercent = progress.progressPercentage
             )
             _books.value = currentList
             persistBooks(currentList)

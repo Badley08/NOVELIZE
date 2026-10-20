@@ -25,6 +25,7 @@ data class Book(
     val filePath: String,
     val language: String = "en",
     val totalChapters: Int = 1,
+    val readingProgressPercent: Float = 0f,
     val lastReadTimestamp: Long = System.currentTimeMillis()
 )
 

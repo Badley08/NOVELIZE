@@ -1,99 +1,100 @@
-# NoveLize Features
+# NoveLize Features & Architecture
 
-> NoveLize is in the design phase. Everything below describes planned behavior for the first release (v1), not shipped features. For the project overview, stack, and license, see the [README](README.md).
+> NoveLize is an immersive, local-first light novel reader and audio drama engine for Android.
+> Below describes the implemented feature architecture and specifications for the application.
 
 ---
 
 ## Resume & Navigation
 
-* **Automatic resume:** The app stores the exact chapter, paragraph, and word where reading or narration stopped. When the book is reopened, the narration restarts from that word.
-* **Narration picks up where it stopped:** After a pause, an interruption (phone call, headset disconnected), or closing the app, playback resumes from the last spoken word, not from the start of the sentence or chapter.
-* **Back to where I stopped:** A button returns to the last playback position after the reader has scrolled elsewhere or browsed other chapters.
-* **Manual stop marker:** The reader can mark any word as the place where they stopped (see the long-press menu below). The marker is kept alongside the automatic position.
+* **Automatic resume:** The app stores the exact chapter, paragraph, sentence, and word where reading or narration stopped. When the book is reopened, narration and visual progress restart from that exact position.
+* **Narration picks up where it stopped:** After pauses or app closure, playback resumes from the last position without losing place.
+* **Back to where I stopped:** A floating resume action button appears whenever the reader scrolls away from the active narration paragraph, allowing instant return to the current reading position.
+* **Manual stop marker:** Readers can long-press any word or paragraph to mark a custom stop point. The marker persists alongside automatic position tracking.
 
 ---
 
 ## Long-Press Menu
 
-Long-pressing a word (or a selected passage) opens a menu with these actions:
+Long-pressing any word in a passage opens a contextual action dialog:
 
-* **Mark as where I stopped:** Sets the stop marker on that word.
-* **Translate:** Shows the offline translation of the word.
-* **Highlight:** Marks the text with a color.
-* **Underline:** Underlines the text.
+* **Mark as where I stopped:** Sets a manual stop bookmark on that word.
+* **Translate (Offline):** Instant on-device bilingual dictionary lookup (English ⇄ French) tailored for light novel prose.
+* **Highlight:** Applies text highlight color styling.
+* **Underline:** Underlines selected passage.
 
 ---
 
 ## Local Multi-Voice Audio Drama
 
-* **Automatic dialogue speaker assignment:** Detects dialogue segments and maps a distinct voice profile to each of up to 5 speakers (for example male, female, teenager, child, narrator).
-* **On-device text-to-speech:** Voice synthesis runs locally. No audio or text is sent to a cloud service.
-* **Engine:** Piper voices running through Sherpa-ONNX, chosen for its range of distinct French and English voices and its low resource use on modest phones (4 GB of RAM).
-* **Optional high-quality pack:** Kokoro voices, downloadable on demand for the best English quality, on devices powerful enough to run them.
-* **Fallback:** If a device cannot run the neural voices, the app falls back to the Android system voice.
-* **Narration language:** English or French, following the language of the imported file. An English file is narrated in English, a French file in French.
+* **Automatic dialogue speaker assignment:** Detects dialogue segments (`«...»`, `"..."`, dashes `—`) and maps distinct voice profiles across 5 speaker roles:
+  * Narrator (neutral pitch and balanced cadence)
+  * Lead Character (slightly lower pitch, dynamic tempo)
+  * Female Voice 1 (higher pitch, clear articulation)
+  * Male Voice 1 (deep resonance, steady cadence)
+  * Supporting Characters (varied timbre)
+* **On-device text-to-speech:** Voice synthesis runs locally with zero telemetry and zero cloud dependencies.
+* **Language adaptation:** English and French files are narrated with language-appropriate voice models.
 
 ---
 
 ## Contextual Sound Design (SFX)
 
-* **Real-time soundscapes:** Triggers ambient audio loops and targeted sound effects aligned with action beats and mood changes in the text.
-* **Source of the sounds:** To be decided (embedded, downloadable, or both).
+* **Real-time soundscapes:** Keyword beats trigger short acoustic sound effects (e.g., sword clash, sword slash, spells, footsteps) synchronized with narration.
+* **SoundPool integration:** Effects are preloaded in Android's `SoundPool` for latency-free playback alongside speech synthesis.
+* **Volume balancing:** Separate volume sliders for SFX and ambient loops in settings.
 
 ---
 
 ## Synchronized Visual Progress
 
-* **Karaoke highlighting:** Highlights the active sentence in real time during playback.
+* **Karaoke highlighting:** The active sentence is highlighted in real time during playback, advancing automatically.
+* **Auto-scroll:** The reader view automatically scrolls to keep active dialogue and text centered on screen.
 
 ---
 
 ## Offline Translation
 
-* **On-device ML translation:** Uses Google ML Kit translation models, so translation needs no API subscription and no internet connection once the models are downloaded.
-* **Word translation:** Long-press a word and choose Translate to see its translation without leaving the page.
+* **Bidirectional bilingual lexicon:** Includes comprehensive English ⇄ French vocabulary spanning fantasy, battle terminology, setting descriptions, and character dialogues.
+* **Language auto-detection:** Detects French and English terms and provides immediate translations without leaving the page.
 
 ---
 
-## Comprehension Validation
+## Dynamic Comprehension Validation (NLP)
 
-* **Lightweight NLP quizzes:** Analyzes character interactions and key plot points on the device at the end of a chapter to offer a quick comprehension check.
-
----
-
-## Import & Reading
-
-* **Supported formats:** EPUB, TXT, PDF, and DOCX. Only DRM-free, user-provided files are supported.
-* **EPUB illustrations:** Images embedded in EPUB files are displayed inline in the reader.
-* **Themes and fonts:** Light, sepia, and night themes, plus font choice and size.
-* **Dynamic book themes:** The reader's colors adapt to the dominant color of each book's cover, so every book gets its own look. This can be turned off in favor of a fixed theme.
+* **Zero hardcoded questions:** Analyzes the actual text of whatever novel or document is imported.
+* **Quote speaker verification:** Detects dialogue quotes and queries which character spoke that specific line in the chapter.
+* **Plot event verification:** Identifies action beats and creates multiple-choice verification questions.
+* **Opening and concluding analysis:** Tests recall of chapter beginnings and climaxes.
 
 ---
 
-## Playback
+## Universal Document Import
 
-* **Background playback:** Narration continues with the screen locked, with lock screen and Bluetooth headset controls.
-* **Sleep timer:** Stops playback automatically after a chosen delay.
-
----
-
-## Library
-
-* **Bookshelf:** Imported books shown with their covers and reading progress.
+* **Supported formats:** EPUB, TXT, PDF, and DOCX (DRM-free).
+* **EPUB extractor:** Unzips archive, parses `content.opf` metadata, extracts XHTML chapters in reading order, and strips formatting.
+* **DOCX extractor:** Reads `word/document.xml`, parses paragraph elements, and structures into chapters.
+* **PDF parser:** Extracts text stream objects (`BT ... ET`) and renders clean reading passages.
 
 ---
 
-## First-Run Setup
+## Automated Self-Updates (GitHub Releases)
 
-On first launch, a setup wizard lets the user configure the app before reading:
-
-* **Appearance:** Base theme, font, font size, and whether book themes follow the cover color.
-* **Resources:** Which voice models and translation languages to download.
-* **Optimal-use notice:** A short screen explains how to get the best experience: use NoveLize on its own, avoid resource-heavy apps in the background, and for long sessions turn off the screen and use headphones. The screen shows a 3D headphones illustration.
+* **Direct GitHub Releases API integration:** Queries latest release tags and changelogs from `Badley08/NOVELIZE`.
+* **In-app downloader:** Downloads `.apk` release assets with real-time download progress.
+* **Package installer:** Triggers Android system package installation via `FileProvider` without requiring Google Play Store services.
 
 ---
 
-## Standalone Onboarding
+## Library & Bookshelf
 
-* **Built-in original content:** Locally authored demo stories showcase voices, translation, and audio effects right after installation.
-* **On-demand resource download:** The core app stays lightweight. Voice models and other assets are fetched through a first-run setup wizard.
+* **Visual bookshelf:** Displays cover representations, chapter counts, and real reading progress percentages.
+* **Persistent private storage:** Novel metadata, parsed chapters, reading progress, and settings persist across app reboots in internal application storage.
+
+---
+
+## First-Run Setup & Splash Screen
+
+* **Physics launch screen:** Spring-driven logo animations with bouncy overshoot, orbital particles, and pulsing sound waves.
+* **Permission requests on launch:** Storage access (`READ_MEDIA_AUDIO` / `READ_EXTERNAL_STORAGE`) and battery optimization exemption (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) for uninterrupted background reading.
+* **Setup wizard:** Configures initial theme, typography sizing, and presents optimal-use hardware guidelines.

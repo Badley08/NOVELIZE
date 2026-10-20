@@ -30,11 +30,10 @@ import kotlinx.coroutines.withContext
  * Coordinates screens: Splash (physics + permissions), Wizard, Library, Reader, and Settings.
  */
 @Composable
-fun MainNavigation(
-    repository: NovelizeRepository = remember { DefaultNovelizeRepository() }
-) {
+fun MainNavigation() {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val repository: NovelizeRepository = remember { DefaultNovelizeRepository(context) }
     val preferences by repository.preferences.collectAsStateWithLifecycle(initialValue = UserPreferences())
     val books by repository.books.collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -137,6 +136,27 @@ fun MainNavigation(
                     currentChapter = firstChapter
                     val progress = repository.getReadingProgress(key.bookId)
                     narrationEngine.setChapter(firstChapter, progress)
+                }
+
+                // Automatically persist reading progress as narration advances
+                LaunchedEffect(narrationState.currentParagraphIndex, narrationState.currentSentenceIndex, narrationState.currentWordIndex) {
+                    currentChapter?.let { ch ->
+                        val totalSentences = ch.paragraphs.sumOf { it.sentences.size }.coerceAtLeast(1)
+                        val passedSentences = ch.paragraphs.take(narrationState.currentParagraphIndex).sumOf { it.sentences.size } + narrationState.currentSentenceIndex
+                        val percent = (passedSentences.toFloat() / totalSentences).coerceIn(0f, 1f)
+
+                        repository.saveReadingProgress(
+                            com.karlitodev.novelize.model.ReadingProgress(
+                                bookId = key.bookId,
+                                chapterIndex = narrationState.currentChapterIndex,
+                                paragraphIndex = narrationState.currentParagraphIndex,
+                                sentenceIndex = narrationState.currentSentenceIndex,
+                                wordIndex = narrationState.currentWordIndex,
+                                lastSpokenWordIndex = narrationState.currentWordIndex,
+                                progressPercentage = percent
+                            )
+                        )
+                    }
                 }
 
                 currentChapter?.let { chapter ->
