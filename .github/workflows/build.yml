@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build and Sign Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -26,11 +26,28 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
+      # Decode the base64-encoded keystore stored as a GitHub secret and write
+      # it to a temporary path that is never persisted in the repository.
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ runner.temp }}/novelize-release.jks
+
+      - name: Build and sign release APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/novelize-release.jks
+          KEYSTORE_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASS }}
+          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload build artifact
+      # Remove the keystore from the runner immediately after the build so it
+      # does not linger in the runner's temp directory.
+      - name: Remove keystore from runner
+        if: always()
+        run: rm -f ${{ runner.temp }}/novelize-release.jks
+
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-unsigned
-          path: app/build/outputs/apk/release/*.apk
+          name: novelize-release-signed
+          path: app/build/outputs/apk/release/app-universal-release.apk

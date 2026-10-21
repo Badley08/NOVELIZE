@@ -29,8 +29,37 @@ android {
         }
     }
 
+    // Signing credentials are read from environment variables only.
+    // The keystore file is listed in .gitignore and must never be committed.
+    // CI injects these via GitHub Actions secrets.
+    // Local developers must export the variables before building:
+    //   export KEYSTORE_PATH=/path/to/novelize-release.jks
+    //   export KEYSTORE_STORE_PASS=...
+    //   export KEYSTORE_KEY_ALIAS=...
+    //   export KEYSTORE_KEY_PASS=...
+    val keystorePath   = System.getenv("KEYSTORE_PATH")
+    val storePassword  = System.getenv("KEYSTORE_STORE_PASS")
+    val keyAlias       = System.getenv("KEYSTORE_KEY_ALIAS")
+    val keyPassword    = System.getenv("KEYSTORE_KEY_PASS")
+
+    signingConfigs {
+        if (keystorePath != null && storePassword != null && keyAlias != null && keyPassword != null) {
+            create("release") {
+                storeFile     = file(keystorePath)
+                storePassword = storePassword
+                this.keyAlias = keyAlias
+                keyPassword   = keyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Wire the release signing config when credentials are available
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            }
             // Enable R8 code shrinking and obfuscation
             isMinifyEnabled = true
             // Enable resource shrinking to remove unused assets and resources
