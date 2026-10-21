@@ -12,8 +12,8 @@ android {
         minSdk = 26
         targetSdk = 37
         maxSdk = 37
-        versionCode = 13
-        versionName = "1.3"
+        versionCode = 14
+        versionName = "1.4"
         // Permanent unique identifier for this application build, used for analytics
         // and crash report correlation. Generated once and never changes between releases.
         buildConfigField("String", "APP_UID", "\"89a2c264f3574a618d3393ba79c3ec8c\"")

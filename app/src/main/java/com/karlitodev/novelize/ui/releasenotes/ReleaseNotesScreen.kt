@@ -38,21 +38,44 @@ private data class ReleaseBlock(
 private val CHANGELOG: List<ReleaseBlock> = listOf(
 
     ReleaseBlock(
+        version = "1.4",
+        date = "2026-10-21",
+        sections = listOf(
+            ChangeSection(
+                title = "New Features",
+                entries = listOf(
+                    ChangeEntry("In-app Release Notes screen integrated directly in Settings, showing the complete version history without any emojis."),
+                    ChangeEntry("Automatic deletion of old GitHub Actions builds: only the 10 most recent runs are kept, all older runs are removed via the GitHub API.")
+                )
+            ),
+            ChangeSection(
+                title = "Bug Fixes and Optimizations",
+                entries = listOf(
+                    ChangeEntry("Fixed R8 build failure caused by the missing class com.gemalto.jp2.JP2Decoder (optional JPX filter of PDFBox-Android, not present on Android). Resolved via ProGuard -dontwarn rules."),
+                    ChangeEntry("Added -keep rules for ONNX Runtime and ML Kit to prevent accidental removal by the R8 minifier."),
+                    ChangeEntry("Fixed hardcoded version constant in the library screen to correctly sync the new-version badge on startup."),
+                    ChangeEntry("Release Notes screen now displays in English by default.")
+                )
+            )
+        )
+    ),
+
+    ReleaseBlock(
         version = "1.3",
         date = "2026-10-21",
         sections = listOf(
             ChangeSection(
-                title = "Nouveautes",
+                title = "New Features",
                 entries = listOf(
-                    ChangeEntry("Detection multilingue par expressions regulieres (Regex) du genre des personnages (masculin et feminin) pour les langues francaise (FR), japonaise (JP), coreenne (KR) et anglaise (EN)."),
-                    ChangeEntry("Attribution dynamique de 4 voix de personnages distinctes (2 voix masculines : MALE_1 et MALE_2, 2 voix feminines : FEMALE_1 et FEMALE_2) en plus du narrateur, avec reglages acoustiques differencies de hauteur tonale (pitch) et de cadence."),
-                    ChangeEntry("Extension du moteur vocal neural local et IA (Piper) pour supporter les modeles de voix secondaires masculins et feminins en francais et en anglais.")
+                    ChangeEntry("Multilingual character gender detection via regular expressions (Regex) for French (FR), Japanese (JP), Korean (KR), and English (EN)."),
+                    ChangeEntry("Dynamic assignment of 4 distinct character voices (2 male: MALE_1 and MALE_2, 2 female: FEMALE_1 and FEMALE_2) in addition to the narrator, with differentiated acoustic settings for pitch and speech rate."),
+                    ChangeEntry("Extension of the local neural AI voice engine (Piper) to support secondary male and female voice models in French and English.")
                 )
             ),
             ChangeSection(
-                title = "Corrections et Optimisations",
+                title = "Bug Fixes and Optimizations",
                 entries = listOf(
-                    ChangeEntry("Correction de l'importation de la bibliotheque PDFBox-Android (com.tom_roush.pdfbox) resolvant l'erreur de compilation en integration continue.")
+                    ChangeEntry("Fixed the import of the PDFBox-Android library (com.tom_roush.pdfbox) resolving the continuous integration build error.")
                 )
             )
         )
@@ -63,32 +86,32 @@ private val CHANGELOG: List<ReleaseBlock> = listOf(
         date = "2026-10-21",
         sections = listOf(
             ChangeSection(
-                title = "Nouveautes",
+                title = "New Features",
                 entries = listOf(
-                    ChangeEntry("Controles multimedia complets dans la barre d'etat, la zone de notification et l'ecran de verrouillage Android via MediaSessionCompat et NotificationCompat.MediaStyle."),
-                    ChangeEntry("Support natif des documents PDF avec extraction de texte et generation automatique de couverture via PdfRenderer et PDFBox-Android."),
-                    ChangeEntry("Support natif des bandes dessinees et mangas au format archive CBZ avec extraction de couverture."),
-                    ChangeEntry("Support natif des fichiers texte Markdown (.md, .markdown) avec hierarchisation des titres de chapitres."),
-                    ChangeEntry("Support ameliore des fichiers EPUB avec analyse structuree du fichier de manifeste container.xml et de l'ordre de lecture du spine (.opf)."),
-                    ChangeEntry("Extraction et affichage automatique de la premiere page ou de la couverture integree pour tous les formats compatibles."),
-                    ChangeEntry("Possibilite pour l'utilisateur de definir et remplacer manuellement la couverture de n'importe quel livre a partir de la galerie d'images."),
-                    ChangeEntry("Option de suppression directe des livres importes de la bibliotheque."),
-                    ChangeEntry("Module de gestion des incidents et crashs (CrashHandler) generant un rapport technique detaille crash.txt et permettant son envoi direct par WhatsApp aux developpeurs."),
-                    ChangeEntry("Synchronisation intelligente des effets sonores (SFX) depuis le depot GitHub avec verification d'integrite pour eviter tout re-telechargement de fichiers deja presents."),
-                    ChangeEntry("Messages d'information et d'accueil personnalises selon la langue utilisateur."),
-                    ChangeEntry("Reprise de lecture intelligente : mise en surbrillance clignotante du texte ou la lecture s'est arretee et assombrissement temporaire de l'interface pour guider l'attention.")
+                    ChangeEntry("Full media controls in the status bar, notification drawer, and Android lock screen via MediaSessionCompat and NotificationCompat.MediaStyle (play, pause, previous sentence, next sentence)."),
+                    ChangeEntry("Native PDF document support with text extraction and automatic cover generation via PdfRenderer and PDFBox-Android."),
+                    ChangeEntry("Native CBZ comic and manga archive support with cover extraction."),
+                    ChangeEntry("Native Markdown file support (.md, .markdown) with chapter title hierarchy."),
+                    ChangeEntry("Improved EPUB support with structured parsing of container.xml manifest and spine reading order (.opf)."),
+                    ChangeEntry("Automatic extraction and display of the first page or embedded cover for all supported formats."),
+                    ChangeEntry("Ability for users to manually set and replace the cover of any book from the image gallery."),
+                    ChangeEntry("Direct book deletion option from the library."),
+                    ChangeEntry("Crash and incident handler (CrashHandler) generating a detailed crash.txt technical report, shareable directly to developers via WhatsApp."),
+                    ChangeEntry("Intelligent SFX sync from GitHub with integrity verification to prevent re-downloading already present files."),
+                    ChangeEntry("Personalized welcome and info messages based on the user language."),
+                    ChangeEntry("Smart reading resume: blinking highlight on the last stopped sentence and temporary screen dim to guide attention.")
                 )
             ),
             ChangeSection(
-                title = "Corrections et Optimisations",
+                title = "Bug Fixes and Optimizations",
                 entries = listOf(
-                    ChangeEntry("Suppression des 32 effets sonores synthetiques generes par python dans les ressources locales afin d'ameliorer la qualite audio."),
-                    ChangeEntry("Conservation et integration des 18 effets sonores reels de qualite studio (combat, magie, interactions)."),
-                    ChangeEntry("Remplacement du synthetiseur vocal synthetique par le moteur TextToSpeech systeme natif d'Android, personnalise par role vocal."),
-                    ChangeEntry("Refonte des regles de detection des effets sonores pour empecher les faux positifs sur les mots du quotidien."),
-                    ChangeEntry("Ajout d'une periode de reinitialisation (cooldown) empechant la repetition abusive d'un meme bruitage a moins de 8 paragraphes d'intervalle."),
-                    ChangeEntry("Publication directe de l'application au format APK sur GitHub Releases sans compression ZIP pour permettre la mise a jour automatique integree."),
-                    ChangeEntry("Correction du redimensionnement de l'animation de presentation au demarrage.")
+                    ChangeEntry("Removed 32 Python-generated synthetic sound effects from local resources and the GitHub repository to improve audio quality."),
+                    ChangeEntry("Retained and integrated 18 real studio-quality sound effects (combat, magic, interactions)."),
+                    ChangeEntry("Replaced the synthetic voice synthesizer with Android's native TextToSpeech engine, customized per vocal role (distinct pitch and rate for narrator, hero, female and male characters)."),
+                    ChangeEntry("Redesigned sound effect detection rules to prevent false positives on common everyday words."),
+                    ChangeEntry("Added a cooldown period preventing the same sound from playing again within 8 paragraphs."),
+                    ChangeEntry("Direct APK release on GitHub Releases without ZIP compression for seamless in-app automatic updates."),
+                    ChangeEntry("Fixed splash screen animation resize on startup.")
                 )
             )
         )
@@ -99,11 +122,11 @@ private val CHANGELOG: List<ReleaseBlock> = listOf(
         date = "2026-10-21",
         sections = listOf(
             ChangeSection(
-                title = "Ajouts",
+                title = "Additions",
                 entries = listOf(
-                    ChangeEntry("Integration du processus d'installation assistee (Wizard) a executer une seule fois a la premiere ouverture."),
-                    ChangeEntry("Verification automatique et silencieuse des mises a jour disponibles via GitHub Releases."),
-                    ChangeEntry("Amelioration de la stabilite du service de lecture audio en arriere-plan.")
+                    ChangeEntry("First-run setup wizard executed once on first launch."),
+                    ChangeEntry("Automatic silent update check via GitHub Releases."),
+                    ChangeEntry("Improved stability of the background audio playback service.")
                 )
             )
         )
@@ -117,11 +140,13 @@ private val CHANGELOG: List<ReleaseBlock> = listOf(
 /**
  * Displays the complete version history of NoveLize.
  * No emojis used anywhere per project convention.
+ * Defaults to English; pass isFr=true from the navigation host when the user
+ * has selected French in Settings.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReleaseNotesScreen(
-    isFr: Boolean = true,
+    isFr: Boolean = false,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -155,7 +180,7 @@ fun ReleaseNotesScreen(
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
             items(CHANGELOG) { release ->
-                ReleaseCard(release = release, isFr = isFr)
+                ReleaseCard(release = release)
             }
         }
     }
@@ -166,7 +191,7 @@ fun ReleaseNotesScreen(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun ReleaseCard(release: ReleaseBlock, isFr: Boolean) {
+private fun ReleaseCard(release: ReleaseBlock) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),

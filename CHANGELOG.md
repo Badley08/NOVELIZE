@@ -3,6 +3,18 @@
 Toutes les modifications notables de ce projet sont documentees dans ce fichier.
 Ce journal ne contient aucun emoji conformement aux exigences de versionnage.
 
+## [1.4] - 2026-10-21
+
+### Nouveautes
+- Ecran "Notes de Version" integre directement dans l'application, accessible depuis les Parametres, affichant l'historique complet de toutes les versions sans aucun emoji.
+- Suppression automatique des anciens builds GitHub Actions : seuls les 10 runs les plus recents sont conserves, les autres sont effaces via l'API GitHub.
+
+### Corrections et Optimisations
+- Correction de l'erreur de compilation R8 causee par la classe manquante com.gemalto.jp2.JP2Decoder (filtre JPX optionnel de PDFBox-Android non present sur Android). Resolution via regles ProGuard -dontwarn.
+- Ajout de regles -keep pour ONNX Runtime et ML Kit afin d'eviter toute suppression accidentelle par le minificateur R8.
+- Correction de la version codee en dur dans la bibliotheque (passage de 1.2 a 1.3, puis 1.4) pour synchroniser correctement le badge de nouveaute au demarrage.
+- Notes de version affichees en anglais par defaut.
+
 ## [1.3] - 2026-10-21
 
 ### Nouveautes

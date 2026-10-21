@@ -70,7 +70,7 @@ fun LibraryScreen(
     val sfxDownloadManager = remember { com.karlitodev.novelize.sfx.SfxDownloadManager(context) }
     val isFr = appLanguage == "fr"
 
-    val currentVersion = "1.2"
+    val currentVersion = "1.4"
     var showChangelog by remember { mutableStateOf(lastSeenVersion.isNotEmpty() && lastSeenVersion != currentVersion) }
     var pendingCrashReport by remember {
         mutableStateOf(if (com.karlitodev.novelize.crash.CrashHandler.hasCrashReport(context)) com.karlitodev.novelize.crash.CrashHandler.readCrashReport(context) else null)
