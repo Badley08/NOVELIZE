@@ -9,12 +9,16 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
+import androidx.media.app.NotificationCompat.MediaStyle
 import com.karlitodev.novelize.MainActivity
 
 /**
- * Foreground service ensuring uninterrupted audio narration when screen is turned off
- * and providing media playback notification controls.
+ * Foreground service ensuring uninterrupted audio narration when the screen is turned off
+ * and providing standard system media playback controls in the Android status bar and lock screen.
  */
 class NarrationPlaybackService : Service() {
 
@@ -61,9 +65,41 @@ class NarrationPlaybackService : Service() {
         fun onStop()
     }
 
+    private var mediaSession: MediaSessionCompat? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        setupMediaSession()
+    }
+
+    private fun setupMediaSession() {
+        mediaSession = MediaSessionCompat(this, "NoveLizePlaybackSession").apply {
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onPlay() {
+                    playbackController?.onPlay()
+                }
+
+                override fun onPause() {
+                    playbackController?.onPause()
+                }
+
+                override fun onSkipToNext() {
+                    playbackController?.onNext()
+                }
+
+                override fun onSkipToPrevious() {
+                    playbackController?.onPrev()
+                }
+
+                override fun onStop() {
+                    playbackController?.onStop()
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            })
+            isActive = true
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -84,10 +120,38 @@ class NarrationPlaybackService : Service() {
         val subtitle = intent?.getStringExtra(EXTRA_SUBTITLE) ?: "Voice Narration Active"
         val isPlaying = intent?.getBooleanExtra(EXTRA_IS_PLAYING, true) ?: true
 
+        updateMediaSessionState(title, subtitle, isPlaying)
         val notification = buildNotification(title, subtitle, isPlaying)
         startForeground(NOTIFICATION_ID, notification)
 
         return START_NOT_STICKY
+    }
+
+    private fun updateMediaSessionState(title: String, subtitle: String, isPlaying: Boolean) {
+        val session = mediaSession ?: return
+
+        val state = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
+        val actions = PlaybackStateCompat.ACTION_PLAY or
+                PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                PlaybackStateCompat.ACTION_STOP
+
+        session.setPlaybackState(
+            PlaybackStateCompat.Builder()
+                .setState(state, PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1.0f)
+                .setActions(actions)
+                .build()
+        )
+
+        session.setMetadata(
+            MediaMetadataCompat.Builder()
+                .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "NoveLize")
+                .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, subtitle)
+                .build()
+        )
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -113,13 +177,16 @@ class NarrationPlaybackService : Service() {
         val stopIntent = Intent(this, NarrationPlaybackService::class.java).apply { action = ACTION_STOP }
         val stopPendingIntent = PendingIntent.getService(this, 4, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val sessionToken = mediaSession?.sessionToken
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(subtitle)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(if (isPlaying) android.R.drawable.ic_media_play else android.R.drawable.ic_media_pause)
             .setContentIntent(openAppPendingIntent)
             .setOngoing(isPlaying)
-            .addAction(android.R.drawable.ic_media_previous, "Prev", prevPendingIntent)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(android.R.drawable.ic_media_previous, "Previous", prevPendingIntent)
             .addAction(
                 if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
                 if (isPlaying) "Pause" else "Play",
@@ -127,12 +194,19 @@ class NarrationPlaybackService : Service() {
             )
             .addAction(android.R.drawable.ic_media_next, "Next", nextPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopPendingIntent)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(subtitle)
-            )
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+
+        if (sessionToken != null) {
+            builder.setStyle(
+                MediaStyle()
+                    .setMediaSession(sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+                    .setShowCancelButton(true)
+                    .setCancelButtonIntent(stopPendingIntent)
+            )
+        }
+
+        return builder.build()
     }
 
     private fun createNotificationChannel() {
@@ -148,5 +222,11 @@ class NarrationPlaybackService : Service() {
             val manager = getSystemService(NotificationManager::class.java)
             manager?.createNotificationChannel(channel)
         }
+    }
+
+    override fun onDestroy() {
+        mediaSession?.release()
+        mediaSession = null
+        super.onDestroy()
     }
 }

@@ -3,6 +3,7 @@ name: Android Build
 on:
   push:
     branches: [ "main", "master" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
@@ -11,6 +12,9 @@ jobs:
   build:
     name: Build and Sign Android APK
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -26,8 +30,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Decode the base64-encoded keystore stored as a GitHub secret and write
-      # it to a temporary path that is never persisted in the repository.
+      # Decode the base64-encoded keystore stored as a GitHub secret.
+      # The file is written to a temp path that is never persisted in the repo.
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ runner.temp }}/novelize-release.jks
@@ -40,14 +44,42 @@ jobs:
           KEYSTORE_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASS }}
         run: ./gradlew assembleRelease --no-daemon
 
-      # Remove the keystore from the runner immediately after the build so it
-      # does not linger in the runner's temp directory.
+      # Wipe keystore from runner immediately after build.
       - name: Remove keystore from runner
         if: always()
         run: rm -f ${{ runner.temp }}/novelize-release.jks
 
-      - name: Upload signed APK
+      # Rename APK to a clean human-readable filename before publishing.
+      # The universal APK produced by Gradle is app-universal-release.apk.
+      - name: Rename APK and extract version
+        id: get_version
+        run: |
+          VERSION=$(grep versionName app/build.gradle.kts | grep -oP '"\K[^"]+')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          mv app/build/outputs/apk/release/app-universal-release.apk \
+             app/build/outputs/apk/release/Novelize-${VERSION}-signed.apk
+
+      # Publish GitHub Release with direct APK asset (no ZIP archive).
+      # This allows NoveLize's in-app UpdateManager to fetch the raw APK and install seamlessly.
+      - name: Publish GitHub Release with direct APK
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.get_version.outputs.version) }}
+          name: NoveLize v${{ steps.get_version.outputs.version }}
+          files: app/build/outputs/apk/release/Novelize-*.apk
+          generate_release_notes: false
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Keep the APK as an uncompressed workflow artifact as backup
+      - name: Upload APK as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: novelize-release-signed
-          path: app/build/outputs/apk/release/app-universal-release.apk
+          name: Novelize-signed
+          path: app/build/outputs/apk/release/Novelize-*.apk
+          compression-level: 0
+

@@ -33,7 +33,7 @@ object SfxCatalog {
             fileName = "sword_clash.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("sword", "blade", "clash", "parry", "épée", "lame", "fer", "entrechoquèrent", "ferraille")
+            keywords = listOf("sword clash", "blades clashed", "parried", "épée", "lame", "entrechoquèrent", "ferraille")
         ),
         SfxItem(
             id = "sword_draw",
@@ -49,7 +49,7 @@ object SfxCatalog {
             fileName = "sword_slash.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("slash", "strike", "cut", "trancha", "coup d'épée", "entailla", "fendit l'air")
+            keywords = listOf("slash", "strike", "trancha", "coup d'épée", "entailla", "fendit l'air")
         ),
         SfxItem(
             id = "arrow_shot",
@@ -57,7 +57,7 @@ object SfxCatalog {
             fileName = "arrow_shot.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("arrow", "bow", "bowstring", "flèche", "arc", "décoche", "trait")
+            keywords = listOf("arrow", "bowstring", "flèche", "tir à l'arc", "décoche", "flèches")
         ),
         SfxItem(
             id = "punch_hit",
@@ -65,7 +65,7 @@ object SfxCatalog {
             fileName = "punch_hit.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("punch", "fist", "blow", "kick", "poing", "coup", "frappe", "baffe", "direct")
+            keywords = listOf("punch", "fist", "coup de poing", "frappa du poing", "baffe", "uppercut")
         ),
         SfxItem(
             id = "shield_block",
@@ -73,7 +73,7 @@ object SfxCatalog {
             fileName = "shield_block.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("shield", "blocked", "bouclier", "bloqua", "parade", "égide")
+            keywords = listOf("shield", "blocked with his shield", "bouclier", "bloqua le coup", "parade au bouclier")
         ),
         SfxItem(
             id = "explosion",
@@ -81,7 +81,7 @@ object SfxCatalog {
             fileName = "explosion.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("explosion", "blast", "detonation", "déflagration", "explosa", "détonation", "fracas")
+            keywords = listOf("explosion", "detonation", "déflagration", "explosa", "détonation", "fracas")
         ),
         SfxItem(
             id = "monster_roar",
@@ -89,7 +89,7 @@ object SfxCatalog {
             fileName = "monster_roar.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("roar", "growl", "beast", "rugissement", "hurlement", "bête", "monstre", "grognement")
+            keywords = listOf("roar", "growl", "rugissement", "hurlement de bête", "grognement féroce")
         ),
         SfxItem(
             id = "whoosh",
@@ -97,7 +97,7 @@ object SfxCatalog {
             fileName = "whoosh.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("whoosh", "dash", "dodge", "esquive", "sillage", "fulgurance", "vif")
+            keywords = listOf("whoosh", "dash", "dodge", "esquive rapide", "fulgurance")
         ),
         SfxItem(
             id = "body_fall",
@@ -105,7 +105,7 @@ object SfxCatalog {
             fileName = "body_fall.mp3",
             isLoop = false,
             category = SfxCategory.COMBAT,
-            keywords = listOf("collapsed", "fell to the ground", "s'effondra", "tomba lourdement", "chuta")
+            keywords = listOf("collapsed", "fell to the ground", "s'effondra", "tomba lourdement", "chuta au sol")
         ),
 
         // Magic & Fantasy (11-20)
@@ -115,7 +115,7 @@ object SfxCatalog {
             fileName = "magic_cast.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("spell", "chant", "incantation", "magie", "sortilège", "sort", "mana")
+            keywords = listOf("incantation", "sortilège", "formule magique", "lance un sort", "mana")
         ),
         SfxItem(
             id = "fireball",
@@ -123,7 +123,7 @@ object SfxCatalog {
             fileName = "fireball.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("fireball", "flame", "blaze", "boule de feu", "flammes", "incendie", "brasier")
+            keywords = listOf("fireball", "boule de feu", "gerbe de flammes", "brasier ardent")
         ),
         SfxItem(
             id = "ice_crystal",
@@ -131,7 +131,7 @@ object SfxCatalog {
             fileName = "ice_crystal.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("ice", "frost", "frozen", "crystal", "glace", "gel", "cristal", "givre")
+            keywords = listOf("ice crystal", "frost", "cristal de glace", "givre mordant", "congélation")
         ),
         SfxItem(
             id = "lightning_strike",
@@ -139,7 +139,7 @@ object SfxCatalog {
             fileName = "lightning_strike.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("lightning", "thunderbolt", "electric", "éclair", "foudre", "tonnerre", "étincelle")
+            keywords = listOf("lightning strike", "thunderbolt", "éclair", "foudre", "coup de tonnerre")
         ),
         SfxItem(
             id = "healing_chime",
@@ -147,7 +147,7 @@ object SfxCatalog {
             fileName = "healing_chime.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("heal", "recovery", "restored", "soin", "guérison", "restaura", "lueur bienveillante")
+            keywords = listOf("healing magic", "sort de soin", "guérison miraculeuse", "lueur bienveillante")
         ),
         SfxItem(
             id = "magic_circle",
@@ -155,7 +155,7 @@ object SfxCatalog {
             fileName = "magic_circle.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("magic circle", "barrier", "rune", "cercle magique", "barrière", "glyphe")
+            keywords = listOf("magic circle", "runic barrier", "cercle magique", "barrière runique")
         ),
         SfxItem(
             id = "summoning",
@@ -163,7 +163,7 @@ object SfxCatalog {
             fileName = "summoning.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("summon", "invoked", "apparition", "invocation", "invoqua", "esprit")
+            keywords = listOf("summoning ritual", "invoqua la créature", "rituel d'invocation")
         ),
         SfxItem(
             id = "teleport",
@@ -171,7 +171,7 @@ object SfxCatalog {
             fileName = "teleport.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("teleport", "portal", "flash of light", "téléportation", "portail", "disparut soudain")
+            keywords = listOf("teleported", "magic portal", "téléportation", "portail dimensionnel")
         ),
         SfxItem(
             id = "dark_aura",
@@ -179,7 +179,7 @@ object SfxCatalog {
             fileName = "dark_aura.mp3",
             isLoop = true,
             category = SfxCategory.MAGIC,
-            keywords = listOf("dark aura", "forbidden magic", "sinister aura", "aura sombre", "maléfique", "énergie noire")
+            keywords = listOf("dark aura", "forbidden magic", "aura maléfique", "énergie sombre")
         ),
         SfxItem(
             id = "level_up",
@@ -187,7 +187,7 @@ object SfxCatalog {
             fileName = "level_up.mp3",
             isLoop = false,
             category = SfxCategory.MAGIC,
-            keywords = listOf("level up", "status window", "skill acquired", "niveau supérieur", "compétence acquise", "statistiques")
+            keywords = listOf("level up", "status window", "niveau supérieur", "montée de niveau")
         ),
 
         // Ambient Loops (21-30)
@@ -197,7 +197,7 @@ object SfxCatalog {
             fileName = "ambient_forest.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("forest", "woods", "trees", "leaves", "forêt", "bois", "arbres", "clairière")
+            keywords = listOf("dense forest", "deep woods", "forêt profonde", "au cœur de la forêt")
         ),
         SfxItem(
             id = "ambient_rain",
@@ -205,7 +205,7 @@ object SfxCatalog {
             fileName = "ambient_rain.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("rain", "downpour", "shower", "pluie", "averse", "gouttes d'eau")
+            keywords = listOf("heavy rain", "downpour", "pluie battante", "averse torrentielle")
         ),
         SfxItem(
             id = "ambient_storm",
@@ -213,7 +213,7 @@ object SfxCatalog {
             fileName = "ambient_storm.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("storm", "thunder", "tempête", "orage", "ouragan")
+            keywords = listOf("thunderstorm", "tempête déchaînée", "orage violent")
         ),
         SfxItem(
             id = "ambient_wind",
@@ -221,7 +221,7 @@ object SfxCatalog {
             fileName = "ambient_wind.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("wind", "breeze", "gale", "vent", "brise", "souffle", "rafale")
+            keywords = listOf("howling wind", "vent glacial", "rafale sifflante")
         ),
         SfxItem(
             id = "ambient_ocean",
@@ -229,7 +229,7 @@ object SfxCatalog {
             fileName = "ambient_ocean.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("ocean", "sea", "waves", "beach", "océan", "mer", "vagues", "rivage", "marée")
+            keywords = listOf("ocean waves", "mer agitée", "fracas des vagues")
         ),
         SfxItem(
             id = "ambient_river",
@@ -237,7 +237,7 @@ object SfxCatalog {
             fileName = "ambient_river.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("river", "stream", "creek", "rivière", "ruisseau", "cours d'eau")
+            keywords = listOf("flowing river", "ruisseau limpide", "cours d'eau tumultueux")
         ),
         SfxItem(
             id = "ambient_campfire",
@@ -245,7 +245,7 @@ object SfxCatalog {
             fileName = "ambient_campfire.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("campfire", "fire", "hearth", "feu de camp", "braises", "âtre")
+            keywords = listOf("campfire", "crépitement du feu", "feu de camp")
         ),
         SfxItem(
             id = "ambient_night",
@@ -253,7 +253,7 @@ object SfxCatalog {
             fileName = "ambient_night.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("crickets", "quiet night", "nuit calme", "grillons", "nocturne")
+            keywords = listOf("night crickets", "nuit paisible", "chant des grillons")
         ),
         SfxItem(
             id = "ambient_city",
@@ -261,7 +261,7 @@ object SfxCatalog {
             fileName = "ambient_city.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("city", "street", "market", "ville", "rues", "marché", "place publique")
+            keywords = listOf("bustling city", "marché animé", "foule citadine")
         ),
         SfxItem(
             id = "ambient_tavern",
@@ -269,7 +269,7 @@ object SfxCatalog {
             fileName = "ambient_tavern.mp3",
             isLoop = true,
             category = SfxCategory.AMBIENT,
-            keywords = listOf("tavern", "inn", "pub", "taverne", "auberge", "comptoir")
+            keywords = listOf("noisy tavern", "auberge bruyante", "salle de taverne")
         ),
 
         // Places & Daily Life (31-38)
@@ -279,7 +279,7 @@ object SfxCatalog {
             fileName = "door_open.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("door opened", "opened the door", "ouvrit la porte", "porte s'ouvrit")
+            keywords = listOf("opened the door", "ouvrit la porte", "porte s'ouvrit")
         ),
         SfxItem(
             id = "door_slam",
@@ -287,7 +287,7 @@ object SfxCatalog {
             fileName = "door_slam.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("door slammed", "slammed the door", "claqua la porte", "porte claqua")
+            keywords = listOf("slammed the door", "claqua la porte", "porte claqua avec force")
         ),
         SfxItem(
             id = "door_knock",
@@ -295,7 +295,7 @@ object SfxCatalog {
             fileName = "door_knock.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("knocked on the door", "knock at the door", "frappa à la porte", "toqua")
+            keywords = listOf("knocked at the door", "frappa à la porte", "toqua à la porte")
         ),
         SfxItem(
             id = "steps_stone",
@@ -303,7 +303,7 @@ object SfxCatalog {
             fileName = "steps_stone.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("footsteps", "walked", "corridor", "pas", "marqua un pas", "marcha", "pavés")
+            keywords = listOf("footsteps on stone", "bruit de pas lourds", "pas résonnèrent")
         ),
         SfxItem(
             id = "steps_grass",
@@ -311,7 +311,7 @@ object SfxCatalog {
             fileName = "steps_grass.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("steps in the grass", "walked on grass", "pas dans l'herbe", "foulant l'herbe")
+            keywords = listOf("footsteps in the grass", "foulant l'herbe haute")
         ),
         SfxItem(
             id = "school_bell",
@@ -319,7 +319,7 @@ object SfxCatalog {
             fileName = "school_bell.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("school bell", "chime", "cloche de l'école", "sonnerie de classe")
+            keywords = listOf("school bell", "cloche de l'académie", "sonnerie de l'école")
         ),
         SfxItem(
             id = "mug_clink",
@@ -327,7 +327,7 @@ object SfxCatalog {
             fileName = "mug_clink.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("cheers", "clinked mugs", "toast", "trinquèrent", "chope", "verre")
+            keywords = listOf("clinked glasses", "trinquèrent joyeusement", "choc des chopes")
         ),
         SfxItem(
             id = "page_turn",
@@ -335,7 +335,7 @@ object SfxCatalog {
             fileName = "page_turn.mp3",
             isLoop = false,
             category = SfxCategory.PLACES,
-            keywords = listOf("turned the page", "grimoire", "tourna la page", "feuilleta")
+            keywords = listOf("turned the page", "tourna la page", "feuilleta le grimoire")
         ),
 
         // Mood & Tension (39-45)
@@ -345,7 +345,7 @@ object SfxCatalog {
             fileName = "heartbeat.mp3",
             isLoop = true,
             category = SfxCategory.MOOD,
-            keywords = listOf("heartbeat", "pulse", "terror", "battement de cœur", "pouls", "panique", "angoisse")
+            keywords = listOf("heart pounded", "heart beating fast", "battements de cœur affolés", "pouls qui s'accélère")
         ),
         SfxItem(
             id = "tension_drone",
@@ -353,7 +353,7 @@ object SfxCatalog {
             fileName = "tension_drone.mp3",
             isLoop = true,
             category = SfxCategory.MOOD,
-            keywords = listOf("tension", "uneasy", "dread", "malaise", "frisson", "oppressant")
+            keywords = listOf("oppressive silence", "chilling tension", "tension insoutenable", "silence oppressant")
         ),
         SfxItem(
             id = "dramatic_sting",
@@ -361,7 +361,7 @@ object SfxCatalog {
             fileName = "dramatic_sting.mp3",
             isLoop = false,
             category = SfxCategory.MOOD,
-            keywords = listOf("shock", "revelation", "plot twist", "stupeur", "sidéré", "révélation")
+            keywords = listOf("sudden revelation", "plot twist", "stupeur totale", "révélation choquante")
         ),
         SfxItem(
             id = "suspense_riser",
@@ -369,7 +369,7 @@ object SfxCatalog {
             fileName = "suspense_riser.mp3",
             isLoop = false,
             category = SfxCategory.MOOD,
-            keywords = listOf("suspense", "mounting fear", "suspense grandissant", "montée d'adrénaline")
+            keywords = listOf("mounting dread", "suspense grandissant", "angoisse montante")
         ),
         SfxItem(
             id = "eerie_wind",
@@ -377,7 +377,7 @@ object SfxCatalog {
             fileName = "eerie_wind.mp3",
             isLoop = true,
             category = SfxCategory.MOOD,
-            keywords = listOf("eerie", "ghostly", "spectral", "spectral", "lugubre", "vent fantomatique")
+            keywords = listOf("eerie whistling", "sinister gust", "souffle spectral", "vent sinistre")
         ),
         SfxItem(
             id = "glass_shatter",
@@ -385,7 +385,7 @@ object SfxCatalog {
             fileName = "glass_shatter.mp3",
             isLoop = false,
             category = SfxCategory.MOOD,
-            keywords = listOf("shattered", "broken glass", "bris de verre", "verre brisé", "fracassa")
+            keywords = listOf("glass shattered", "window smashed", "verre se brisa", "vitre vola en éclats")
         ),
         SfxItem(
             id = "bell_toll",
@@ -393,7 +393,7 @@ object SfxCatalog {
             fileName = "bell_toll.mp3",
             isLoop = false,
             category = SfxCategory.MOOD,
-            keywords = listOf("bell tolled", "funeral bell", "cloche sonna", "glas", "beffroi")
+            keywords = listOf("funeral bell", "death knell", "glas funèbre", "le glas sonna")
         ),
 
         // Travel & Vehicles (46-50)
@@ -403,7 +403,7 @@ object SfxCatalog {
             fileName = "horse_gallop.mp3",
             isLoop = true,
             category = SfxCategory.TRAVEL,
-            keywords = listOf("horse", "gallop", "riding", "cheval", "galop", "chevaucha", "monture")
+            keywords = listOf("horse galloping", "riding fast", "cheval au galop", "galop effréné")
         ),
         SfxItem(
             id = "carriage_wheels",
@@ -411,7 +411,7 @@ object SfxCatalog {
             fileName = "carriage_wheels.mp3",
             isLoop = true,
             category = SfxCategory.TRAVEL,
-            keywords = listOf("carriage", "wagon", "cart", "carriole", "roues", "calèche", "charrette")
+            keywords = listOf("carriage rolled", "cart wheels", "calèche s'ébranla", "roues de la charrette")
         ),
         SfxItem(
             id = "ship_creak",
@@ -419,7 +419,7 @@ object SfxCatalog {
             fileName = "ship_creak.mp3",
             isLoop = true,
             category = SfxCategory.TRAVEL,
-            keywords = listOf("ship", "boat", "sailing", "navire", "bateau", "coque en bois", "gréement")
+            keywords = listOf("ship creaked", "wooden hull", "coque du navire", "grincement du bateau")
         ),
         SfxItem(
             id = "train_pass",
@@ -427,7 +427,7 @@ object SfxCatalog {
             fileName = "train_pass.mp3",
             isLoop = false,
             category = SfxCategory.TRAVEL,
-            keywords = listOf("train", "locomotive", "railway", "train", "voie ferrée", "rame")
+            keywords = listOf("train whistled", "locomotive rushed", "sifflet du train", "passage du train")
         ),
         SfxItem(
             id = "car_engine",
@@ -435,21 +435,26 @@ object SfxCatalog {
             fileName = "car_engine.mp3",
             isLoop = true,
             category = SfxCategory.TRAVEL,
-            keywords = listOf("car", "engine", "vehicle", "voiture", "moteur", "automobile")
+            keywords = listOf("engine roared", "car accelerated", "moteur vrombit", "démarrage de la voiture")
         )
     )
 
+    private fun matchesKeyword(text: String, keyword: String): Boolean {
+        val pattern = Regex("(?:^|[^\\p{L}\\p{N}])" + Regex.escape(keyword) + "(?:$|[^\\p{L}\\p{N}])", RegexOption.IGNORE_CASE)
+        return pattern.containsMatchIn(text)
+    }
+
     fun findSfxCue(text: String): SfxItem? {
-        val lower = text.lowercase()
+        if (text.length < 8) return null
         return items.firstOrNull { item ->
-            !item.isLoop && item.keywords.any { lower.contains(it) }
+            !item.isLoop && item.keywords.any { matchesKeyword(text, it) }
         }
     }
 
     fun findAmbientCue(text: String): SfxItem? {
-        val lower = text.lowercase()
+        if (text.length < 12) return null
         return items.firstOrNull { item ->
-            item.isLoop && item.keywords.any { lower.contains(it) }
+            item.isLoop && item.keywords.any { matchesKeyword(text, it) }
         }
     }
 }

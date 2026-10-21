@@ -103,7 +103,7 @@ fun MainNavigation() {
                                     }
 
                                     context.contentResolver.openInputStream(uri)?.use { stream ->
-                                        val parser = DefaultNovelParser()
+                                        val parser = DefaultNovelParser(context)
                                         val (importedBook, chapters) = parser.parseStream(stream, fileName)
                                         repository.addBook(importedBook, chapters)
                                     }
@@ -124,7 +124,33 @@ fun MainNavigation() {
                     },
                     onSettingsClick = {
                         backStack.add(SettingsNavKey)
-                    }
+                    },
+                    onPickCover = { bookId, uri ->
+                        coroutineScope.launch {
+                            withContext(Dispatchers.IO) {
+                                try {
+                                    val coversDir = java.io.File(context.filesDir, "covers").apply { mkdirs() }
+                                    val targetFile = java.io.File(coversDir, "cover_${bookId}_${System.currentTimeMillis()}.jpg")
+                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                        targetFile.outputStream().use { output -> input.copyTo(output) }
+                                    }
+                                    repository.updateBookCover(bookId, targetFile.absolutePath)
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    },
+                    onDeleteBook = { bookId ->
+                        coroutineScope.launch {
+                            repository.removeBook(bookId)
+                        }
+                    },
+                    lastSeenVersion = preferences.lastSeenVersion,
+                    onAcknowledgeChangelog = { version ->
+                        coroutineScope.launch {
+                            repository.updatePreferences(preferences.copy(lastSeenVersion = version))
+                        }
+                    },
+                    appLanguage = preferences.appLanguage
                 )
             }
 

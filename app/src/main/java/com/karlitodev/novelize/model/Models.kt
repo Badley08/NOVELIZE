@@ -9,7 +9,9 @@ enum class DocumentFormat {
     EPUB,
     TXT,
     PDF,
-    DOCX
+    DOCX,
+    MD,
+    CBZ
 }
 
 /**

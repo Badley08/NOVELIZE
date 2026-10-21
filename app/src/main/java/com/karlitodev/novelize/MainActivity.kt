@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.karlitodev.novelize.crash.CrashHandler.init(this)
 
         enableEdgeToEdge()
 

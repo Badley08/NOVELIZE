@@ -18,8 +18,15 @@ onnxRuntime = "1.20.0"
 # ML Kit for on-device entity extraction (quiz generation) and language ID
 mlkitEntityExtraction = "16.0.0-beta5"
 mlkitLanguageId = "17.0.6"
+# AndroidX Media - provides MediaSessionCompat and NotificationCompat.MediaStyle
+# for proper system-integrated media controls in the notification bar and lock screen.
+androidxMedia = "1.7.0"
+# PDFBox-Android for robust, native PDF text and chapter extraction
+pdfboxAndroid = "2.0.27.0"
 
 [libraries]
+androidx-media = { module = "androidx.media:media", version.ref = "androidxMedia" }
+pdfbox-android = { module = "com.tom-roush:pdfbox-android", version.ref = "pdfboxAndroid" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivity" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "androidxComposeBom" }

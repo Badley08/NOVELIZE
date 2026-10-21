@@ -12,8 +12,8 @@ android {
         minSdk = 26
         targetSdk = 37
         maxSdk = 37
-        versionCode = 11
-        versionName = "1.1"
+        versionCode = 12
+        versionName = "1.2"
         // Permanent unique identifier for this application build, used for analytics
         // and crash report correlation. Generated once and never changes between releases.
         buildConfigField("String", "APP_UID", "\"89a2c264f3574a618d3393ba79c3ec8c\"")
@@ -156,4 +156,10 @@ dependencies {
   // ML Kit Language Identification — detects whether a loaded book is EN or FR
   // to route narration to the correct Piper voice model.
   implementation(libs.mlkit.language.id)
+
+  // AndroidX Media for MediaSessionCompat and MediaStyle notification controls
+  implementation(libs.androidx.media)
+
+  // PDFBox-Android for parsing and extracting text from PDF books
+  implementation(libs.pdfbox.android)
 }

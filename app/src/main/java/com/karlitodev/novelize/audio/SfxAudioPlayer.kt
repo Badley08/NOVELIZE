@@ -133,7 +133,7 @@ class SfxAudioPlayer(
                 continue
             }
 
-            // 3. Check embedded raw resource
+            // 3. Check embedded raw resource if available
             val rawName = item.fileName.substringBeforeLast(".")
             val resId = context.resources.getIdentifier(rawName, "raw", context.packageName)
             if (resId != 0) {

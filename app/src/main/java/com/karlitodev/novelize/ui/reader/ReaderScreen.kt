@@ -1,6 +1,7 @@
 package com.karlitodev.novelize.ui.reader
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -69,6 +70,26 @@ fun ReaderScreen(
 
     // State for manual stop marker (smart resume)
     var manualStopPosition by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var isResumeDimmed by remember(chapter.id) {
+        mutableStateOf(narrationState.currentParagraphIndex > 0)
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "resumePulse")
+    val resumePulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(650, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            isResumeDimmed = false
+        }
+    }
 
     // State for highlighted sentences/passages
     val userHighlights = remember { mutableStateListOf<Pair<Int, Int>>() }
@@ -206,8 +227,16 @@ fun ReaderScreen(
                         isMarkedStop = manualStopPosition == Pair(pIndex, 0),
                         isUserHighlighted = userHighlights.contains(Pair(pIndex, 0)),
                         isUserUnderlined = userUnderlines.contains(Pair(pIndex, 0)),
-                        onSentenceClick = { sIndex -> onSentenceClick(pIndex, sIndex) },
-                        onWordLongPress = { word -> selectedWordForAction = word }
+                        isResumeHighlight = isResumeDimmed && (pIndex == narrationState.currentParagraphIndex),
+                        resumePulseAlpha = resumePulseAlpha,
+                        onSentenceClick = { sIndex ->
+                            isResumeDimmed = false
+                            onSentenceClick(pIndex, sIndex)
+                        },
+                        onWordLongPress = { word ->
+                            isResumeDimmed = false
+                            selectedWordForAction = word
+                        }
                     )
                 }
 
@@ -257,6 +286,45 @@ fun ReaderScreen(
                             ) {
                                 Text("Take Chapter Quiz")
                             }
+                        }
+                    }
+                }
+            }
+
+            // Resume Reading Dimming Overlay
+            if (isResumeDimmed) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .clickable { isResumeDimmed = false }
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = BrandPurple,
+                        shadowElevation = 8.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp)
+                            .clickable { isResumeDimmed = false }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bookmark,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Reprise de lecture (Toucher pour continuer)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -513,6 +581,8 @@ private fun ParagraphView(
     isMarkedStop: Boolean,
     isUserHighlighted: Boolean,
     isUserUnderlined: Boolean,
+    isResumeHighlight: Boolean = false,
+    resumePulseAlpha: Float = 1f,
     onSentenceClick: (Int) -> Unit,
     onWordLongPress: (String) -> Unit
 ) {
@@ -523,8 +593,11 @@ private fun ParagraphView(
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(
-                if (isUserHighlighted) BrandAmber.copy(alpha = 0.25f)
-                else Color.Transparent
+                when {
+                    isResumeHighlight -> BrandAmber.copy(alpha = resumePulseAlpha)
+                    isUserHighlighted -> BrandAmber.copy(alpha = 0.25f)
+                    else -> Color.Transparent
+                }
             )
             .padding(vertical = 4.dp, horizontal = 2.dp)
     ) {

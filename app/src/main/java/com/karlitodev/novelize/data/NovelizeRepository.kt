@@ -39,11 +39,14 @@ data class UserPreferences(
     val theme: ReaderTheme = ReaderTheme.DYNAMIC,
     val fontSizeSp: Float = 18f,
     val lineSpacingMultiplier: Float = 1.35f,
-    val sfxEnabled: Boolean = true,
+    val sfxEnabled: Boolean = false,
     val sfxVolume: Float = 0.8f,
     val ambientVolume: Float = 0.5f,
     val selectedVoicePack: String = "piper_default",
-    val appLanguage: String = "fr"
+    val appLanguage: String = "fr",
+    // Tracks the last version the user saw the changelog for.
+    // When versionName differs from this value, the changelog dialog is shown.
+    val lastSeenVersion: String = ""
 )
 
 /**
@@ -60,6 +63,10 @@ interface NovelizeRepository {
     suspend fun addHighlight(highlight: TextHighlight)
     suspend fun updatePreferences(preferences: UserPreferences)
     suspend fun addBook(book: Book, chapters: List<Chapter>)
+    // Updates the cover image path for a specific book.
+    suspend fun updateBookCover(bookId: String, coverPath: String)
+    // Removes a book and all its associated chapters and reading progress from storage.
+    suspend fun removeBook(bookId: String)
 }
 
 /**
@@ -94,11 +101,12 @@ class DefaultNovelizeRepository(
         val themeName = prefs.getString("reader_theme", ReaderTheme.DYNAMIC.name) ?: ReaderTheme.DYNAMIC.name
         val theme = try { ReaderTheme.valueOf(themeName) } catch (_: Exception) { ReaderTheme.DYNAMIC }
         val fontSize = prefs.getFloat("font_size_sp", 18f)
-        val sfx = prefs.getBoolean("sfx_enabled", true)
+        val sfx = prefs.getBoolean("sfx_enabled", false)
         val sfxVol = prefs.getFloat("sfx_vol", 0.8f)
         val ambVol = prefs.getFloat("amb_vol", 0.5f)
         val voicePack = prefs.getString("voice_pack", "piper_default") ?: "piper_default"
         val appLang = prefs.getString("app_language", "fr") ?: "fr"
+        val lastSeen = prefs.getString("last_seen_version", "") ?: ""
 
         return UserPreferences(
             isWizardCompleted = completed,
@@ -108,7 +116,8 @@ class DefaultNovelizeRepository(
             sfxVolume = sfxVol,
             ambientVolume = ambVol,
             selectedVoicePack = voicePack,
-            appLanguage = appLang
+            appLanguage = appLang,
+            lastSeenVersion = lastSeen
         )
     }
 
@@ -351,6 +360,7 @@ class DefaultNovelizeRepository(
             putFloat("amb_vol", preferences.ambientVolume)
             putString("voice_pack", preferences.selectedVoicePack)
             putString("app_language", preferences.appLanguage)
+            putString("last_seen_version", preferences.lastSeenVersion)
             apply()
         }
     }
@@ -361,5 +371,27 @@ class DefaultNovelizeRepository(
         _books.value = updated
         persistBooks(updated)
         persistChapters(book.id, chapters)
+    }
+
+    override suspend fun updateBookCover(bookId: String, coverPath: String) {
+        val updated = _books.value.map { book ->
+            if (book.id == bookId) book.copy(coverPath = coverPath) else book
+        }
+        _books.value = updated
+        persistBooks(updated)
+    }
+
+    // Removes all data associated with a book from memory and disk storage.
+    override suspend fun removeBook(bookId: String) {
+        chapterCache.remove(bookId)
+        progressCache.remove(bookId)
+        val updated = _books.value.filter { it.id != bookId }
+        _books.value = updated
+        persistBooks(updated)
+        // Delete chapter file from internal storage
+        context?.let { ctx ->
+            val chaptersFile = File(ctx.filesDir, "chapters_$bookId.json")
+            if (chaptersFile.exists()) chaptersFile.delete()
+        }
     }
 }

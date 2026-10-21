@@ -7,6 +7,9 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import com.karlitodev.novelize.model.SpeakerRole
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.LongBuffer
+import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -51,6 +55,11 @@ class LocalNeuralAiVoiceEngine(
     private var audioTrack: AudioTrack? = null
     private var playbackJob: Job? = null
 
+    // Customized Android TextToSpeech fallback engine
+    private var androidTts: TextToSpeech? = null
+    private var isTtsReady: Boolean = false
+    private var currentSpeakingText: String? = null
+
     var onWordProgress: ((wordIndex: Int) -> Unit)? = null
     var onSentenceComplete: (() -> Unit)? = null
     var onError: ((message: String) -> Unit)? = null
@@ -59,7 +68,8 @@ class LocalNeuralAiVoiceEngine(
     private var playbackSpeed: Float = 1.0f
 
     /**
-     * Initializes the audio track buffer for low-latency streaming playback.
+     * Initializes the audio track buffer for low-latency streaming playback
+     * and sets up the customized Android TextToSpeech engine as high-fidelity fallback.
      */
     fun initialize() {
         val minBufferSize = AudioTrack.getMinBufferSize(
@@ -91,8 +101,44 @@ class LocalNeuralAiVoiceEngine(
             _engineState.value = _engineState.value.copy(isModelLoaded = true)
         } catch (e: Exception) {
             _engineState.value = _engineState.value.copy(isModelLoaded = false)
-            onError?.invoke("Failed to initialize neural audio track: ${e.message}")
         }
+
+        // Initialize Android TextToSpeech with customized voice and pitch parameters
+        try {
+            androidTts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    isTtsReady = true
+                    androidTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) {
+                            _engineState.value = _engineState.value.copy(isPlaying = true, isSynthesizing = false)
+                        }
+
+                        override fun onDone(utteranceId: String?) {
+                            _engineState.value = _engineState.value.copy(isPlaying = false)
+                            scope.launch(Dispatchers.Main) {
+                                onSentenceComplete?.invoke()
+                            }
+                        }
+
+                        override fun onError(utteranceId: String?) {
+                            _engineState.value = _engineState.value.copy(isPlaying = false)
+                            scope.launch(Dispatchers.Main) {
+                                onSentenceComplete?.invoke()
+                            }
+                        }
+
+                        override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                            val text = currentSpeakingText ?: return
+                            val prefix = text.take(start)
+                            val wordIndex = prefix.trim().split(Regex("\\s+")).count { it.isNotBlank() }
+                            scope.launch(Dispatchers.Main) {
+                                onWordProgress?.invoke(wordIndex)
+                            }
+                        }
+                    })
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     /**
@@ -102,11 +148,13 @@ class LocalNeuralAiVoiceEngine(
         playbackSpeed = speed.coerceIn(0.5f, 2.0f)
         try {
             audioTrack?.setPlaybackRate((sampleRate * playbackSpeed).toInt())
+            androidTts?.setSpeechRate(playbackSpeed)
         } catch (_: Exception) {}
     }
 
     /**
-     * Synthesizes and plays a sentence using the neural model associated with role and language.
+     * Synthesizes and plays a sentence using the neural model associated with role and language,
+     * falling back to a customized Android TextToSpeech voice profile if neural model is missing.
      */
     fun speakSentence(
         text: String,
@@ -134,24 +182,67 @@ class LocalNeuralAiVoiceEngine(
             } ?: AiVoiceEngine.MODELS.first()
 
             val onnxFile = File(modelDir, targetModel.modelFileName)
-            val pcmAudio = if (onnxFile.exists()) {
-                synthesizeWithOnnxModel(onnxFile, text, role)
+            if (onnxFile.exists()) {
+                val pcmAudio = synthesizeWithOnnxModel(onnxFile, text, role)
+                _engineState.value = _engineState.value.copy(isSynthesizing = false)
+                playPcmAudioWithWordSync(pcmAudio, text)
+                _engineState.value = _engineState.value.copy(isPlaying = false)
+                onSentenceComplete?.invoke()
             } else {
-                synthesizeProceduralNeuralSpeech(text, role, language)
+                // Customized Android TTS fallback with character-specific pitch and cadence
+                withContext(Dispatchers.Main) {
+                    speakWithCustomAndroidTts(text, role, language)
+                }
             }
-
-            _engineState.value = _engineState.value.copy(isSynthesizing = false)
-
-            // Stream PCM audio and synchronize word progress
-            playPcmAudioWithWordSync(pcmAudio, text)
-
-            _engineState.value = _engineState.value.copy(isPlaying = false)
-            onSentenceComplete?.invoke()
         }
     }
 
     /**
-     * Stops playback and resets audio track buffers.
+     * Plays sentence using customized Android system TTS with role-based pitch and cadence modulation.
+     */
+    private fun speakWithCustomAndroidTts(text: String, role: SpeakerRole, language: String) {
+        val tts = androidTts ?: run {
+            onSentenceComplete?.invoke()
+            return
+        }
+
+        val locale = if (language.startsWith("fr", ignoreCase = true)) Locale.FRENCH else Locale.ENGLISH
+        tts.language = locale
+
+        // Customized acoustic profiles per speaker role
+        when (role) {
+            SpeakerRole.NARRATOR -> {
+                tts.setPitch(1.0f)
+                tts.setSpeechRate(1.0f * playbackSpeed)
+            }
+            SpeakerRole.HERO -> {
+                tts.setPitch(1.08f)
+                tts.setSpeechRate(1.04f * playbackSpeed)
+            }
+            SpeakerRole.FEMALE_1 -> {
+                tts.setPitch(1.24f)
+                tts.setSpeechRate(1.0f * playbackSpeed)
+            }
+            SpeakerRole.MALE_1 -> {
+                tts.setPitch(0.82f)
+                tts.setSpeechRate(0.96f * playbackSpeed)
+            }
+            SpeakerRole.SUPPORTING -> {
+                tts.setPitch(0.72f)
+                tts.setSpeechRate(0.92f * playbackSpeed)
+            }
+        }
+
+        currentSpeakingText = text
+        val utteranceId = "novelize_${System.currentTimeMillis()}"
+        val params = Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
+        }
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+    }
+
+    /**
+     * Stops playback and resets audio buffers and TTS.
      */
     fun stop() {
         playbackJob?.cancel()
@@ -159,6 +250,7 @@ class LocalNeuralAiVoiceEngine(
         try {
             audioTrack?.pause()
             audioTrack?.flush()
+            androidTts?.stop()
         } catch (_: Exception) {}
         _engineState.value = _engineState.value.copy(isPlaying = false, isSynthesizing = false)
     }
@@ -169,6 +261,7 @@ class LocalNeuralAiVoiceEngine(
     fun pause() {
         try {
             audioTrack?.pause()
+            androidTts?.stop()
         } catch (_: Exception) {}
         _engineState.value = _engineState.value.copy(isPlaying = false)
     }
@@ -184,7 +277,7 @@ class LocalNeuralAiVoiceEngine(
     }
 
     /**
-     * Releases audio track resources.
+     * Releases audio track and TTS resources.
      */
     fun release() {
         stop()
@@ -192,6 +285,11 @@ class LocalNeuralAiVoiceEngine(
             audioTrack?.release()
         } catch (_: Exception) {}
         audioTrack = null
+
+        try {
+            androidTts?.shutdown()
+        } catch (_: Exception) {}
+        androidTts = null
     }
 
     /**
