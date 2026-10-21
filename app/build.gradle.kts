@@ -6,13 +6,27 @@ plugins {
 
 android {
     namespace = "com.karlitodev.novelize"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.karlitodev.novelize"
-        minSdk = 29
-        targetSdk = 36
+        minSdk = 26
+        targetSdk = 37
+        maxSdk = 37
         versionCode = 1
         versionName = "1.0"
+    }
+
+    // Build a single universal APK that installs on all ABI architectures.
+    // This avoids the split-apk install failure seen on devices that do not
+    // receive a matching split artifact.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            // Include all supported architectures in one universal APK
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
     }
 
     buildTypes {
