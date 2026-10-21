@@ -1,14 +1,9 @@
 package com.karlitodev.novelize
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,7 +21,7 @@ import kotlinx.coroutines.launch
 /**
  * Root activity for the NoveLize application.
  * Handles edge-to-edge layout initialization, runtime permission requests,
- * battery optimization exemption, and background update checks.
+ * and background update checks.
  */
 class MainActivity : ComponentActivity() {
 
@@ -37,34 +32,14 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { /* Permission result handled silently */ }
 
-    /**
-     * Launcher for the battery optimization exemption settings screen.
-     * Re-checks result on return so background narration stays uninterrupted.
-     */
-    private val batteryOptimizationLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-            Toast.makeText(
-                this,
-                "Battery optimization is still active. Background narration may be interrupted.",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.karlitodev.novelize.crash.CrashHandler.init(this)
 
         enableEdgeToEdge()
 
-        // Request runtime permissions (storage / audio)
+        // Request runtime permissions safely
         requestAppPermissions()
-
-        // Request battery optimization exemption for uninterrupted background playback
-        requestBatteryOptimizationExemption()
 
         // Schedule a silent background check for new releases
         checkForUpdates()
@@ -85,32 +60,17 @@ class MainActivity : ComponentActivity() {
      * Requests notification permission on Android 13+ (API 33) for background narration controls.
      */
     private fun requestAppPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
             }
-        }
+        } catch (_: Exception) {}
     }
 
-    /**
-     * Asks the system to exclude NoveLize from battery optimization.
-     * This prevents Doze mode from pausing background TTS narration or SFX playback.
-     */
-    private fun requestBatteryOptimizationExemption() {
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:$packageName")
-            }
-            try {
-                batteryOptimizationLauncher.launch(intent)
-            } catch (_: Exception) {
-                // Some OEMs remove this activity; silently fail
-            }
-        }
-    }
 
     /**
      * Silently checks GitHub Releases for a newer APK version.

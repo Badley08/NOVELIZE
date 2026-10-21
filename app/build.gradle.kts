@@ -6,12 +6,11 @@ plugins {
 
 android {
     namespace = "com.karlitodev.novelize"
-    compileSdk = 37
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.karlitodev.novelize"
         minSdk = 26
-        targetSdk = 37
-        maxSdk = 37
+        targetSdk = 35
         versionCode = 14
         versionName = "1.4"
         // Permanent unique identifier for this application build, used for analytics
