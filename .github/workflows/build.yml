@@ -15,6 +15,7 @@ jobs:
 
     permissions:
       contents: write
+      actions: write        # required to delete old workflow runs
 
     steps:
       - name: Checkout repository
@@ -54,7 +55,7 @@ jobs:
       - name: Rename APK and extract version
         id: get_version
         run: |
-          VERSION=$(grep versionName app/build.gradle.kts | grep -oP '"\K[^"]+')
+          VERSION=$(grep versionName app/build.gradle.kts | grep -oP '"[^"]+"' | tr -d '"')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           mv app/build/outputs/apk/release/app-universal-release.apk \
              app/build/outputs/apk/release/Novelize-${VERSION}-signed.apk
@@ -83,3 +84,21 @@ jobs:
           path: app/build/outputs/apk/release/Novelize-*.apk
           compression-level: 0
 
+      # Delete stale workflow runs to keep the Actions tab clean.
+      # Retains the 10 most recent runs regardless of status.
+      - name: Delete old workflow runs
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WORKFLOW_ID=$(gh api repos/${{ github.repository }}/actions/workflows \
+            --jq '.workflows[] | select(.name == "Android Build") | .id')
+
+          OLD_RUNS=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/${WORKFLOW_ID}/runs?per_page=100" \
+            --jq '.workflow_runs | sort_by(.created_at) | reverse | .[10:] | .[].id')
+
+          for RUN_ID in $OLD_RUNS; do
+            echo "Deleting run $RUN_ID"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/runs/${RUN_ID}" || true
+          done

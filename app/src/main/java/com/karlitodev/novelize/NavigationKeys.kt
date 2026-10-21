@@ -67,6 +67,13 @@ data object UpdateNavKey : NavKey
 data class BookDetailNavKey(val bookId: String) : NavKey
 
 /**
+ * Navigation destination key for the release notes / changelog screen.
+ * Displays the full version history of NoveLize without any emojis.
+ */
+@Serializable
+data object ReleaseNotesNavKey : NavKey
+
+/**
  * Legacy compatibility key for tests and default back stack entry.
  */
 @Serializable

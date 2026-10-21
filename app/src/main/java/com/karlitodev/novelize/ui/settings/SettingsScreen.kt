@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
@@ -57,6 +58,7 @@ fun SettingsScreen(
     preferences: UserPreferences,
     onPreferencesChange: (UserPreferences) -> Unit,
     onBack: () -> Unit,
+    onReleaseNotesClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -471,6 +473,29 @@ fun SettingsScreen(
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
+
+                    // Release Notes button
+                    OutlinedButton(
+                        onClick = onReleaseNotesClick,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            tint = BrandPurple,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isFr) "Notes de Version" else "Release Notes",
+                            color = BrandPurple,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // WhatsApp Contact Button
                     Button(

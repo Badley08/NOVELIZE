@@ -18,6 +18,7 @@ import com.karlitodev.novelize.parser.DefaultNovelParser
 import com.karlitodev.novelize.sample.SampleNovels
 import com.karlitodev.novelize.ui.library.LibraryScreen
 import com.karlitodev.novelize.ui.reader.ReaderScreen
+import com.karlitodev.novelize.ui.releasenotes.ReleaseNotesScreen
 import com.karlitodev.novelize.ui.settings.SettingsScreen
 import com.karlitodev.novelize.ui.splash.SplashScreen
 import com.karlitodev.novelize.ui.wizard.WizardScreen
@@ -223,6 +224,14 @@ fun MainNavigation() {
                             repository.updatePreferences(updated)
                         }
                     },
+                    onBack = { backStack.removeLastOrNull() },
+                    onReleaseNotesClick = { backStack.add(ReleaseNotesNavKey) }
+                )
+            }
+
+            entry<ReleaseNotesNavKey> {
+                ReleaseNotesScreen(
+                    isFr = preferences.appLanguage == "fr",
                     onBack = { backStack.removeLastOrNull() }
                 )
             }
