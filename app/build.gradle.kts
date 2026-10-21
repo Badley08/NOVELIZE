@@ -37,18 +37,18 @@ android {
     //   export KEYSTORE_STORE_PASS=...
     //   export KEYSTORE_KEY_ALIAS=...
     //   export KEYSTORE_KEY_PASS=...
-    val keystorePath   = System.getenv("KEYSTORE_PATH")
-    val storePassword  = System.getenv("KEYSTORE_STORE_PASS")
-    val keyAlias       = System.getenv("KEYSTORE_KEY_ALIAS")
-    val keyPassword    = System.getenv("KEYSTORE_KEY_PASS")
+    val envKeystorePath = System.getenv("KEYSTORE_PATH")
+    val envStorePass    = System.getenv("KEYSTORE_STORE_PASS")
+    val envKeyAlias     = System.getenv("KEYSTORE_KEY_ALIAS")
+    val envKeyPass      = System.getenv("KEYSTORE_KEY_PASS")
 
     signingConfigs {
-        if (keystorePath != null && storePassword != null && keyAlias != null && keyPassword != null) {
+        if (envKeystorePath != null && envStorePass != null && envKeyAlias != null && envKeyPass != null) {
             create("release") {
-                storeFile     = file(keystorePath)
-                storePassword = storePassword
-                this.keyAlias = keyAlias
-                keyPassword   = keyPassword
+                storeFile     = file(envKeystorePath)
+                storePassword = envStorePass
+                keyAlias      = envKeyAlias
+                keyPassword   = envKeyPass
             }
         }
     }
