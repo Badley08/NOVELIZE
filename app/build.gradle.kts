@@ -9,7 +9,7 @@ android {
     compileSdk = 37
     defaultConfig {
         applicationId = "com.karlitodev.novelize"
-        minSdk = 28
+        minSdk = 26
         targetSdk = 37
         maxSdk = 37
         versionCode = 11
