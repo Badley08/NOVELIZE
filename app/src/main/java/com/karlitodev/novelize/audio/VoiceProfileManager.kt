@@ -73,9 +73,17 @@ class VoiceProfileManager(
                 tts.setPitch(1.30f)
                 tts.setSpeechRate(baseSpeed * 1.0f)
             }
+            SpeakerRole.FEMALE_2 -> {
+                tts.setPitch(1.22f)
+                tts.setSpeechRate(baseSpeed * 1.02f)
+            }
             SpeakerRole.MALE_1 -> {
                 tts.setPitch(0.78f)
                 tts.setSpeechRate(baseSpeed * 0.95f)
+            }
+            SpeakerRole.MALE_2 -> {
+                tts.setPitch(0.85f)
+                tts.setSpeechRate(baseSpeed * 0.98f)
             }
             SpeakerRole.SUPPORTING -> {
                 tts.setPitch(1.15f)
@@ -93,10 +101,10 @@ class VoiceProfileManager(
         if (localeVoices.isEmpty()) return null
 
         return when (role) {
-            SpeakerRole.FEMALE_1 -> {
+            SpeakerRole.FEMALE_1, SpeakerRole.FEMALE_2 -> {
                 localeVoices.firstOrNull { it.name.contains("female", ignoreCase = true) || it.name.contains("femme", ignoreCase = true) }
             }
-            SpeakerRole.MALE_1, SpeakerRole.HERO -> {
+            SpeakerRole.MALE_1, SpeakerRole.MALE_2, SpeakerRole.HERO, SpeakerRole.SUPPORTING -> {
                 localeVoices.firstOrNull { it.name.contains("male", ignoreCase = true) || it.name.contains("homme", ignoreCase = true) }
             }
             else -> localeVoices.firstOrNull()
