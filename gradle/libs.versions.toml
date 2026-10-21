@@ -13,6 +13,11 @@ junit = "4.13.2"
 kotlin = "2.3.20"
 nav3Core = "1.0.1"
 lifecycleViewmodelNav3 = "2.10.0"
+# ONNX Runtime for on-device neural TTS inference (Piper voice models)
+onnxRuntime = "1.20.0"
+# ML Kit for on-device entity extraction (quiz generation) and language ID
+mlkitEntityExtraction = "16.0.0-beta5"
+mlkitLanguageId = "17.0.6"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -36,6 +41,12 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
+# ONNX Runtime Android — runs Piper neural voice model ONNX checkpoints on-device
+onnx-runtime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxRuntime" }
+# ML Kit Entity Extraction — drives dynamic comprehension quiz question generation
+mlkit-entity-extraction = { module = "com.google.mlkit:entity-extraction", version.ref = "mlkitEntityExtraction" }
+# ML Kit Language Identification — detects book language (EN/FR) for narration routing
+mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlkitLanguageId" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

@@ -12,8 +12,11 @@ android {
         minSdk = 26
         targetSdk = 37
         maxSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 1.1
+        versionName = "1.1"
+        // Permanent unique identifier for this application build, used for analytics
+        // and crash report correlation. Generated once and never changes between releases.
+        buildConfigField("String", "APP_UID", "\"89a2c264f3574a618d3393ba79c3ec8c\"")
     }
 
     // Build a single universal APK that installs on all ABI architectures.
@@ -83,7 +86,8 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      // Enabled to expose APP_UID and version constants via BuildConfig at runtime
+      buildConfig = true
       shaders = false
     }
 
@@ -140,4 +144,16 @@ dependencies {
   implementation(libs.androidx.navigation3.ui)
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+
+  // ONNX Runtime — executes Piper neural voice model ONNX checkpoints on-device
+  // without any internet connection or cloud inference.
+  implementation(libs.onnx.runtime.android)
+
+  // ML Kit Entity Extraction — on-device NLP model that identifies entities
+  // (names, places, dates) in chapter text to generate comprehension quiz questions.
+  implementation(libs.mlkit.entity.extraction)
+
+  // ML Kit Language Identification — detects whether a loaded book is EN or FR
+  // to route narration to the correct Piper voice model.
+  implementation(libs.mlkit.language.id)
 }
