@@ -67,13 +67,14 @@ fun MainNavigation() {
 
             entry<WizardNavKey> {
                 WizardScreen(
-                    onComplete = { theme, fontSize ->
+                    onComplete = { theme, fontSize, appLanguage ->
                         coroutineScope.launch {
                             repository.updatePreferences(
                                 preferences.copy(
                                     isWizardCompleted = true,
                                     theme = theme,
-                                    fontSizeSp = fontSize
+                                    fontSizeSp = fontSize,
+                                    appLanguage = appLanguage
                                 )
                             )
                             backStack.clear()
@@ -131,11 +132,14 @@ fun MainNavigation() {
                 var currentChapter by remember { mutableStateOf<Chapter?>(null) }
 
                 LaunchedEffect(key.bookId) {
+                    val book = books.firstOrNull { it.id == key.bookId }
                     val chapters = repository.getChapters(key.bookId)
                     val firstChapter = chapters.firstOrNull() ?: SampleNovels.getDemoChapters().first()
                     currentChapter = firstChapter
                     val progress = repository.getReadingProgress(key.bookId)
-                    narrationEngine.setChapter(firstChapter, progress)
+                    narrationEngine.setSfxVolume(if (preferences.sfxEnabled) preferences.sfxVolume else 0f)
+                    narrationEngine.setAmbientVolume(if (preferences.sfxEnabled) preferences.ambientVolume else 0f)
+                    narrationEngine.setChapter(firstChapter, progress, book?.language ?: "en")
                 }
 
                 // Automatically persist reading progress as narration advances

@@ -42,7 +42,8 @@ data class UserPreferences(
     val sfxEnabled: Boolean = true,
     val sfxVolume: Float = 0.8f,
     val ambientVolume: Float = 0.5f,
-    val selectedVoicePack: String = "piper_default"
+    val selectedVoicePack: String = "piper_default",
+    val appLanguage: String = "fr"
 )
 
 /**
@@ -97,6 +98,7 @@ class DefaultNovelizeRepository(
         val sfxVol = prefs.getFloat("sfx_vol", 0.8f)
         val ambVol = prefs.getFloat("amb_vol", 0.5f)
         val voicePack = prefs.getString("voice_pack", "piper_default") ?: "piper_default"
+        val appLang = prefs.getString("app_language", "fr") ?: "fr"
 
         return UserPreferences(
             isWizardCompleted = completed,
@@ -105,7 +107,8 @@ class DefaultNovelizeRepository(
             sfxEnabled = sfx,
             sfxVolume = sfxVol,
             ambientVolume = ambVol,
-            selectedVoicePack = voicePack
+            selectedVoicePack = voicePack,
+            appLanguage = appLang
         )
     }
 
@@ -347,6 +350,7 @@ class DefaultNovelizeRepository(
             putFloat("sfx_vol", preferences.sfxVolume)
             putFloat("amb_vol", preferences.ambientVolume)
             putString("voice_pack", preferences.selectedVoicePack)
+            putString("app_language", preferences.appLanguage)
             apply()
         }
     }

@@ -8,10 +8,8 @@
     <!-- Self-updating from GitHub Releases -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Permissions required for reading DRM-free local books and documents -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- Permissions for foreground playback notification -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Uninterrupted background playback with screen turned off -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -36,6 +34,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Foreground service for background narration and media notification -->
+        <service
+            android:name=".audio.NarrationPlaybackService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
 
         <!-- FileProvider for installing downloaded APK updates from GitHub Releases -->
         <provider

@@ -1,12 +1,6 @@
 package com.karlitodev.novelize.audio
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.media.SoundPool
-import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import com.karlitodev.novelize.model.Chapter
 import com.karlitodev.novelize.model.ReadingProgress
 import com.karlitodev.novelize.model.Sentence
@@ -20,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
  * State representing narration playback and visual synchronization.
@@ -36,86 +29,83 @@ data class NarrationState(
     val activeSfxTitle: String? = null,
     val activeAmbientTitle: String? = null,
     val sleepTimerRemainingSeconds: Int? = null,
-    val isTtsInitialized: Boolean = false
+    val isTtsInitialized: Boolean = false,
+    val availableSfxCount: Int = 0,
+    val activeAiVoiceModelName: String? = null,
+    val unsupportedLanguageNotice: String? = null
 )
 
 /**
  * Core audio drama and multi-voice narration manager.
- * Orchestrates multi-voice TTS, sound effects triggers, sleep timers, and karaoke highlighting.
+ * Uses on-device LocalNeuralAiVoiceEngine for local neural voice synthesis.
+ * Coordinates background sound effects, ambient soundscapes, sleep timers,
+ * audio focus, and media playback notifications.
  */
 class NarrationEngine(
     private val context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
-) : TextToSpeech.OnInitListener {
+) : NarrationPlaybackService.PlaybackController {
 
-    private var tts: TextToSpeech? = null
-    private var soundPool: SoundPool? = null
-    private var ambientPlayer: MediaPlayer? = null
+    companion object {
+        const val VOICE_VOLUME_NARRATOR = 1.0f
+        const val VOICE_VOLUME_CHARACTER = 0.8f
+        const val SFX_BACKGROUND_DUCK = 0.35f
+        const val AMBIENT_BACKGROUND_DUCK = 0.25f
+    }
+
+    val localNeuralVoiceEngine = LocalNeuralAiVoiceEngine(context, scope)
+    val sfxAudioPlayer = SfxAudioPlayer(context)
+    val voiceProfileManager = VoiceProfileManager(context)
+    val aiVoiceEngine = AiVoiceEngine(context)
     private var sleepTimerJob: Job? = null
 
-    private val _state = MutableStateFlow(NarrationState())
+    private val _state = MutableStateFlow(NarrationState(availableSfxCount = sfxAudioPlayer.getDetectedCount()))
     val state: StateFlow<NarrationState> = _state.asStateFlow()
 
     private var activeChapter: Chapter? = null
-
-    private val soundMap = mutableMapOf<String, Int>()
+    private var chapterLanguage: String = "fr"
 
     init {
-        tts = TextToSpeech(context.applicationContext, this)
-
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
-
-        soundPool = SoundPool.Builder()
-            .setMaxStreams(4)
-            .setAudioAttributes(audioAttributes)
-            .build()
-
-        try {
-            val clashRes = context.resources.getIdentifier("sword_clash", "raw", context.packageName)
-            if (clashRes != 0) {
-                soundPool?.load(context, clashRes, 1)?.let { soundMap["sword_clash"] = it }
+        // Initialize on-device neural voice engine
+        localNeuralVoiceEngine.initialize()
+        localNeuralVoiceEngine.onWordProgress = { wordIndex ->
+            _state.value = _state.value.copy(currentWordIndex = wordIndex)
+        }
+        localNeuralVoiceEngine.onSentenceComplete = {
+            scope.launch {
+                handleSentenceFinished()
             }
-            val slashRes = context.resources.getIdentifier("sword_slash", "raw", context.packageName)
-            if (slashRes != 0) {
-                soundPool?.load(context, slashRes, 1)?.let { soundMap["sword_slash"] = it }
+        }
+        localNeuralVoiceEngine.onError = {
+            scope.launch {
+                _state.value = _state.value.copy(isPlaying = false)
+                sfxAudioPlayer.releaseDucking()
+                sfxAudioPlayer.pauseAmbient()
+                updateNotification(false)
             }
-        } catch (_: Exception) {}
-    }
+        }
 
-    override fun onInit(status: Int) {
-        if (status == TextToSpeech.SUCCESS) {
-            tts?.language = Locale.ENGLISH
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {
-                    // Utterance started
-                }
+        _state.value = _state.value.copy(
+            isTtsInitialized = true,
+            availableSfxCount = sfxAudioPlayer.getDetectedCount()
+        )
 
-                override fun onDone(utteranceId: String?) {
-                    scope.launch {
-                        handleSentenceFinished()
-                    }
-                }
+        // Setup notification and headset media controller listener
+        NarrationPlaybackService.playbackController = this
 
-                override fun onError(utteranceId: String?) {
-                    scope.launch {
-                        _state.value = _state.value.copy(isPlaying = false)
-                    }
-                }
-
-                override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
-                    // Word-level progress for smart resume
-                    _state.value = _state.value.copy(currentWordIndex = start)
-                }
-            })
-            _state.value = _state.value.copy(isTtsInitialized = true)
+        // Audio focus listeners
+        voiceProfileManager.onAudioFocusLost = {
+            scope.launch { pause() }
+        }
+        voiceProfileManager.onAudioFocusGained = {
+            // Audio focus recovered
         }
     }
 
-    fun setChapter(chapter: Chapter, initialProgress: ReadingProgress? = null) {
+    fun setChapter(chapter: Chapter, initialProgress: ReadingProgress? = null, language: String = "fr") {
         activeChapter = chapter
+        chapterLanguage = language
+
         if (initialProgress != null) {
             _state.value = _state.value.copy(
                 currentChapterIndex = initialProgress.chapterIndex,
@@ -135,13 +125,23 @@ class NarrationEngine(
 
     fun play() {
         val chapter = activeChapter ?: return
+        if (!voiceProfileManager.requestAudioFocus()) {
+            return
+        }
+
         _state.value = _state.value.copy(isPlaying = true)
+        sfxAudioPlayer.resumeAmbient()
         speakCurrentSentence(chapter)
+        updateNotification(true)
     }
 
     fun pause() {
-        tts?.stop()
+        localNeuralVoiceEngine.pause()
+        sfxAudioPlayer.releaseDucking()
+        sfxAudioPlayer.pauseAmbient()
+        voiceProfileManager.abandonAudioFocus()
         _state.value = _state.value.copy(isPlaying = false)
+        updateNotification(false)
     }
 
     fun togglePlayback() {
@@ -189,7 +189,15 @@ class NarrationEngine(
 
     fun setPlaybackSpeed(speed: Float) {
         _state.value = _state.value.copy(playbackSpeed = speed)
-        tts?.setSpeechRate(speed)
+        localNeuralVoiceEngine.setPlaybackSpeed(speed)
+    }
+
+    fun setSfxVolume(volume: Float) {
+        sfxAudioPlayer.sfxVolume = volume
+    }
+
+    fun setAmbientVolume(volume: Float) {
+        sfxAudioPlayer.ambientVolume = volume
     }
 
     fun startSleepTimer(minutes: Int) {
@@ -214,30 +222,64 @@ class NarrationEngine(
         _state.value = _state.value.copy(sleepTimerRemainingSeconds = null)
     }
 
+    fun refreshAudioCues() {
+        sfxAudioPlayer.reloadAudioResources()
+        _state.value = _state.value.copy(availableSfxCount = sfxAudioPlayer.getDetectedCount())
+    }
+
     private fun speakCurrentSentence(chapter: Chapter) {
         val pIndex = _state.value.currentParagraphIndex
         val sIndex = _state.value.currentSentenceIndex
 
         val paragraph = chapter.paragraphs.getOrNull(pIndex) ?: run {
             _state.value = _state.value.copy(isPlaying = false)
+            sfxAudioPlayer.stopAmbient()
+            updateNotification(false)
             return
         }
 
         val sentence = paragraph.sentences.getOrNull(sIndex) ?: run {
             _state.value = _state.value.copy(isPlaying = false)
+            sfxAudioPlayer.stopAmbient()
+            updateNotification(false)
             return
         }
 
-        // Apply distinct multi-voice profile based on speaker role
-        applyVoiceProfile(paragraph.speakerRole)
-        _state.value = _state.value.copy(currentSpeaker = paragraph.speakerRole)
+        // Verify that the text language is supported
+        val eligibility = aiVoiceEngine.checkEligibility(chapterLanguage, sentence.text)
+        if (eligibility is VoiceSynthesisEligibility.UnsupportedLanguage) {
+            _state.value = _state.value.copy(
+                isPlaying = false,
+                unsupportedLanguageNotice = "Language unsupported: only English and French texts are supported by neural AI models."
+            )
+            sfxAudioPlayer.stopAmbient()
+            voiceProfileManager.abandonAudioFocus()
+            updateNotification(false)
+            return
+        }
 
-        // Trigger contextual sound effects if present
-        triggerSfxIfPresent(sentence)
+        // Resolve Neural AI voice model for speaker role
+        val neuralModel = aiVoiceEngine.getModelForRole(paragraph.speakerRole, chapterLanguage)
 
-        val params = Bundle()
-        val utteranceId = "utterance_${pIndex}_${sIndex}"
-        tts?.speak(sentence.text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
+        // Duck SFX and ambient loops to background sound levels during narration
+        sfxAudioPlayer.applyBackgroundDucking(
+            sfxDuck = SFX_BACKGROUND_DUCK,
+            ambientDuck = AMBIENT_BACKGROUND_DUCK
+        )
+
+        _state.value = _state.value.copy(
+            currentSpeaker = paragraph.speakerRole,
+            activeAiVoiceModelName = neuralModel.name,
+            unsupportedLanguageNotice = null
+        )
+
+        // Trigger contextual background sound effects and ambient soundscapes
+        triggerAudioCues(sentence)
+
+        // Synthesize and play with on-device neural voice engine
+        localNeuralVoiceEngine.speakSentence(sentence.text, paragraph.speakerRole, chapterLanguage)
+
+        updateNotification(true, sentence.text)
     }
 
     private fun handleSentenceFinished() {
@@ -265,56 +307,63 @@ class NarrationEngine(
         } else {
             // End of chapter reached
             _state.value = _state.value.copy(isPlaying = false)
+            sfxAudioPlayer.releaseDucking()
+            sfxAudioPlayer.stopAmbient()
+            voiceProfileManager.abandonAudioFocus()
+            updateNotification(false)
         }
     }
 
-    private fun applyVoiceProfile(speaker: SpeakerRole) {
-        when (speaker) {
-            SpeakerRole.NARRATOR -> {
-                tts?.setPitch(1.0f)
-                tts?.setSpeechRate(_state.value.playbackSpeed)
-            }
-            SpeakerRole.HERO -> {
-                tts?.setPitch(0.9f)
-                tts?.setSpeechRate(_state.value.playbackSpeed * 1.05f)
-            }
-            SpeakerRole.FEMALE_1 -> {
-                tts?.setPitch(1.3f)
-                tts?.setSpeechRate(_state.value.playbackSpeed * 1.0f)
-            }
-            SpeakerRole.MALE_1 -> {
-                tts?.setPitch(0.8f)
-                tts?.setSpeechRate(_state.value.playbackSpeed * 0.95f)
-            }
-            SpeakerRole.SUPPORTING -> {
-                tts?.setPitch(1.15f)
-                tts?.setSpeechRate(_state.value.playbackSpeed)
+    private fun triggerAudioCues(sentence: Sentence) {
+        val sfxId = sentence.sfxCue
+        if (sfxId != null) {
+            sfxAudioPlayer.playSfx(sfxId)
+            val sfxItem = SfxCatalog.items.firstOrNull { it.id == sfxId }
+            _state.value = _state.value.copy(activeSfxTitle = sfxItem?.title)
+        } else {
+            _state.value = _state.value.copy(activeSfxTitle = null)
+        }
+
+        val ambientId = sentence.ambientCue
+        if (ambientId != null) {
+            val ambientItem = SfxCatalog.items.firstOrNull { it.id == ambientId }
+            if (ambientItem != null) {
+                sfxAudioPlayer.playAmbient(ambientItem)
+                _state.value = _state.value.copy(activeAmbientTitle = ambientItem.title)
             }
         }
     }
 
-    private fun triggerSfxIfPresent(sentence: Sentence) {
-        val sfxItem = sentence.sfxCue?.let { id -> SfxCatalog.items.firstOrNull { it.id == id } }
-        val ambientItem = sentence.ambientCue?.let { id -> SfxCatalog.items.firstOrNull { it.id == id } }
-
-        sentence.sfxCue?.let { cueId ->
-            val soundId = soundMap[cueId]
-            if (soundId != null) {
-                soundPool?.play(soundId, 0.85f, 0.85f, 1, 0, 1.0f)
-            }
-        }
-
-        _state.value = _state.value.copy(
-            activeSfxTitle = sfxItem?.title,
-            activeAmbientTitle = ambientItem?.title
-        )
+    private fun updateNotification(isPlaying: Boolean, subtitle: String? = null) {
+        val title = activeChapter?.title ?: "NoveLize Reader"
+        val sub = subtitle ?: if (isPlaying) "Playing Neural Audio Drama" else "Narration Paused"
+        NarrationPlaybackService.startService(context, title, sub, isPlaying)
     }
 
     fun release() {
-        sleepTimerJob?.cancel()
-        tts?.stop()
-        tts?.shutdown()
-        soundPool?.release()
-        ambientPlayer?.release()
+        localNeuralVoiceEngine.release()
+        sfxAudioPlayer.release()
+        voiceProfileManager.abandonAudioFocus()
+    }
+
+    // PlaybackController callbacks
+    override fun onPlay() {
+        play()
+    }
+
+    override fun onPause() {
+        pause()
+    }
+
+    override fun onNext() {
+        nextSentence()
+    }
+
+    override fun onPrev() {
+        previousSentence()
+    }
+
+    override fun onStop() {
+        pause()
     }
 }

@@ -68,16 +68,8 @@ fun SplashScreen(
     // Phase state machine: 0=animation, 1=permission requests, 2=done
     var phase by remember { mutableIntStateOf(0) }
 
-    // Permission tracking
-    var storageGranted by remember { mutableStateOf(isStoragePermissionGranted(context)) }
+    // Battery optimization tracking
     var batteryOptimizationDisabled by remember { mutableStateOf(isBatteryOptimizationDisabled(context)) }
-
-    // Storage permission launcher
-    val storagePermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        storageGranted = isGranted
-    }
 
     // Battery optimization intent launcher
     val batteryIntentLauncher = rememberLauncherForActivityResult(
@@ -95,16 +87,7 @@ fun SplashScreen(
         }
         1 -> {
             PermissionRequestScreen(
-                storageGranted = storageGranted,
                 batteryOptimizationDisabled = batteryOptimizationDisabled,
-                onRequestStorage = {
-                    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        Manifest.permission.READ_MEDIA_AUDIO
-                    } else {
-                        Manifest.permission.READ_EXTERNAL_STORAGE
-                    }
-                    storagePermissionLauncher.launch(permission)
-                },
                 onRequestBattery = {
                     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                         data = Uri.parse("package:${context.packageName}")
@@ -257,21 +240,23 @@ private fun PhysicsAnimatedSplash(
                 alpha = pulseAlpha2
             )
 
-            // Orbital feature dots
+            // Orbital feature dots rotated via drawscope.rotate
             val orbitRadius = 180f
             val iconPositions = listOf(0f, 60f, 120f, 180f, 240f, 300f)
             val colors = listOf(BrandAmber, BrandTeal, BrandCoral, BrandEmerald, BrandPurpleLight, BrandAmber)
 
-            iconPositions.forEachIndexed { index, baseAngle ->
-                val angle = Math.toRadians((baseAngle + orbitalAngle).toDouble())
-                val x = centerX + orbitRadius * cos(angle).toFloat()
-                val y = centerY + orbitRadius * sin(angle).toFloat()
-                drawCircle(
-                    color = colors[index],
-                    radius = 6f,
-                    center = Offset(x, y),
-                    alpha = 0.7f
-                )
+            rotate(degrees = orbitalAngle, pivot = Offset(centerX, centerY)) {
+                iconPositions.forEachIndexed { index, baseAngle ->
+                    val angle = Math.toRadians(baseAngle.toDouble())
+                    val x = centerX + orbitRadius * cos(angle).toFloat()
+                    val y = centerY + orbitRadius * sin(angle).toFloat()
+                    drawCircle(
+                        color = colors[index],
+                        radius = 6f,
+                        center = Offset(x, y),
+                        alpha = 0.7f
+                    )
+                }
             }
         }
 
@@ -323,9 +308,10 @@ private fun PhysicsAnimatedSplash(
 
             // Animated feature icon row appearing with spring
             Row(
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.alpha(subtitleAlpha.value)
             ) {
+                FeatureChip(icon = Icons.Default.AutoStories, label = "Reader")
                 FeatureChip(icon = Icons.Default.RecordVoiceOver, label = "Multi-Voice")
                 FeatureChip(icon = Icons.Default.MusicNote, label = "Sound FX")
                 FeatureChip(icon = Icons.Default.Headphones, label = "Offline")
@@ -369,9 +355,7 @@ private fun FeatureChip(icon: ImageVector, label: String) {
  */
 @Composable
 private fun PermissionRequestScreen(
-    storageGranted: Boolean,
     batteryOptimizationDisabled: Boolean,
-    onRequestStorage: () -> Unit,
     onRequestBattery: () -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier = Modifier
@@ -401,7 +385,7 @@ private fun PermissionRequestScreen(
             )
 
             Text(
-                text = "Required Permissions",
+                text = "Background Playback",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -409,7 +393,7 @@ private fun PermissionRequestScreen(
             )
 
             Text(
-                text = "NoveLize needs a few permissions to read your imported novels and deliver uninterrupted narration in the background.",
+                text = "To deliver uninterrupted voice narration when your screen is locked, NoveLize requests battery optimization exemption.",
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
@@ -417,13 +401,19 @@ private fun PermissionRequestScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Storage access permission card
+            // Storage permission card for novel import and SFX
+            val hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(LocalContext.current, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+            } else {
+                ContextCompat.checkSelfPermission(LocalContext.current, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+            }
+
             PermissionCard(
                 icon = Icons.Default.Folder,
-                title = "Storage Access",
-                description = "Read your local EPUB, TXT, PDF, and DOCX novel files.",
-                isGranted = storageGranted,
-                onRequest = onRequestStorage
+                title = "Library & Audio Storage",
+                description = "Enable seamless reading of local EPUB, TXT, and audio drama sound files.",
+                isGranted = hasStoragePermission,
+                onRequest = onRequestBattery
             )
 
             // Battery optimization exemption card
@@ -446,17 +436,9 @@ private fun PermissionRequestScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
             ) {
                 Text(
-                    text = if (storageGranted && batteryOptimizationDisabled) "All Set — Continue" else "Continue Anyway",
+                    text = if (batteryOptimizationDisabled) "All Set — Continue" else "Continue",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
-                )
-            }
-
-            if (!storageGranted || !batteryOptimizationDisabled) {
-                Text(
-                    text = "You can grant these later in Settings.",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.5f)
                 )
             }
         }
@@ -515,18 +497,6 @@ private fun PermissionCard(
                 }
             }
         }
-    }
-}
-
-private fun isStoragePermissionGranted(context: Context): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        ContextCompat.checkSelfPermission(
-            context, Manifest.permission.READ_MEDIA_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
-    } else {
-        ContextCompat.checkSelfPermission(
-            context, Manifest.permission.READ_EXTERNAL_STORAGE
-        ) == PackageManager.PERMISSION_GRANTED
     }
 }
 

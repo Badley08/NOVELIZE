@@ -2,7 +2,7 @@
 
 ![NoveLize Banner](https://img.shields.io/badge/NoveLize-Interactive_Light_Novel_Reader-6C5CE7?style=for-the-badge&logo=android&logoColor=white)
 
-[![Status](https://img.shields.io/badge/Status-In_Design-orange?style=flat-square)](#project-status)
+[![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen?style=flat-square)](#project-status)
 [![Android Version](https://img.shields.io/badge/Target-Android_10%2B_%28API_29%2B%29-3DDC84?style=flat-square&logo=android&logoColor=white)](https://developer.android.com/)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![UI Framework](https://img.shields.io/badge/UI-Jetpack_Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
@@ -19,8 +19,8 @@
 
 ## Project Status
 
-> **NoveLize is currently in the design phase. There is no usable release yet.**
-> This document describes the planned application. Everything below is a target, not a shipped feature, and details may change as development starts.
+> **NoveLize is in active development.** Core architecture, navigation, reader engine, and most UI screens are implemented.
+> Some features listed below are still being refined. See the roadmap at the bottom for current progress.
 
 ---
 
@@ -28,7 +28,7 @@
 
 **NoveLize** is a planned Android application that aims to redefine the light novel reading experience. By combining offline artificial intelligence with physics-based UI animations, it will turn static text into an immersive audio performance, without relying on a central backend and without hosting any copyrighted content.
 
-All features are planned for the first release (v1).
+Most features below are already implemented. Remaining items are in active development toward v1.
 
 ---
 

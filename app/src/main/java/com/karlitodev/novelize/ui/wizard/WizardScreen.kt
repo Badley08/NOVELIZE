@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Security
@@ -36,17 +37,20 @@ import com.karlitodev.novelize.theme.BrandPurpleLight
 
 /**
  * First-run onboarding wizard.
- * Configures appearance, neural voice profiles, and optimal use guidelines.
+ * Configures application UI/UX language (Français / English), appearance,
+ * neural voice profiles, and optimal use guidelines.
  */
 @Composable
 fun WizardScreen(
-    onComplete: (ReaderTheme, Float) -> Unit,
+    onComplete: (ReaderTheme, Float, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var step by remember { mutableIntStateOf(0) }
     var selectedTheme by remember { mutableStateOf(ReaderTheme.DYNAMIC) }
     var fontSizeSp by remember { mutableFloatStateOf(18f) }
-    var selectedLanguage by remember { mutableStateOf("en") }
+    var selectedLanguage by remember { mutableStateOf("fr") }
+
+    val isFr = selectedLanguage == "fr"
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -62,9 +66,9 @@ fun WizardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Step indicators
+                    // Step indicators (4 steps: Language, Appearance, Voices, Guidelines)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        repeat(3) { index ->
+                        repeat(4) { index ->
                             Box(
                                 modifier = Modifier
                                     .size(if (index == step) 24.dp else 10.dp, 10.dp)
@@ -78,19 +82,25 @@ fun WizardScreen(
 
                     Button(
                         onClick = {
-                            if (step < 2) {
+                            if (step < 3) {
                                 step++
                             } else {
-                                onComplete(selectedTheme, fontSizeSp)
+                                onComplete(selectedTheme, fontSizeSp, selectedLanguage)
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = BrandPurple),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (step == 2) "Start Reading" else "Continue")
+                        Text(
+                            if (step == 3) {
+                                if (isFr) "Commencer la lecture" else "Start Reading"
+                            } else {
+                                if (isFr) "Continuer" else "Continue"
+                            }
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
-                            imageVector = if (step == 2) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
+                            imageVector = if (step == 3) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null
                         )
                     }
@@ -107,17 +117,110 @@ fun WizardScreen(
                 .fillMaxSize()
         ) { currentStep ->
             when (currentStep) {
-                0 -> AppearanceStep(
+                0 -> LanguageStep(
+                    selectedLanguage = selectedLanguage,
+                    onLanguageSelected = { selectedLanguage = it }
+                )
+                1 -> AppearanceStep(
+                    isFr = isFr,
                     selectedTheme = selectedTheme,
                     onThemeSelected = { selectedTheme = it },
                     fontSize = fontSizeSp,
                     onFontSizeChanged = { fontSizeSp = it }
                 )
-                1 -> VoicesStep(
-                    selectedLanguage = selectedLanguage,
-                    onLanguageSelected = { selectedLanguage = it }
+                2 -> VoicesStep(
+                    isFr = isFr,
+                    selectedLanguage = selectedLanguage
                 )
-                2 -> OptimalUseStep()
+                3 -> OptimalUseStep(isFr = isFr)
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageStep(
+    selectedLanguage: String,
+    onLanguageSelected: (String) -> Unit
+) {
+    val isFr = selectedLanguage == "fr"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.Language,
+            contentDescription = null,
+            tint = BrandPurple,
+            modifier = Modifier.size(54.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = if (isFr) "Langue de l'Application" else "Application Language",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = if (isFr) "Choisissez la langue de l'interface et des modèles IA."
+            else "Choose your preferred UI and neural voice model language.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp, bottom = 28.dp)
+        )
+
+        // Language Choice Cards
+        listOf(
+            Triple("fr", "Français", "Interface et narration optimisées pour les light novels en français"),
+            Triple("en", "English", "UI and neural narration optimized for English light novels")
+        ).forEach { (code, title, desc) ->
+            val isSelected = selectedLanguage == code
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .clickable { onLanguageSelected(code) }
+                    .border(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) BrandPurple else MaterialTheme.colorScheme.outlineVariant,
+                        shape = RoundedCornerShape(16.dp)
+                    ),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) BrandPurple.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = isSelected,
+                        onClick = { onLanguageSelected(code) },
+                        colors = RadioButtonDefaults.colors(selectedColor = BrandPurple)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
+                            color = if (isSelected) BrandPurple else MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = desc,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -125,6 +228,7 @@ fun WizardScreen(
 
 @Composable
 private fun AppearanceStep(
+    isFr: Boolean,
     selectedTheme: ReaderTheme,
     onThemeSelected: (ReaderTheme) -> Unit,
     fontSize: Float,
@@ -144,13 +248,14 @@ private fun AppearanceStep(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Customize Your Reader",
+            text = if (isFr) "Personnalisation du Lecteur" else "Customize Your Reader",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "Select your preferred visual style and reading comfort.",
+            text = if (isFr) "Sélectionnez votre thème et le confort de lecture souhaité."
+            else "Select your preferred visual style and reading comfort.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -164,6 +269,13 @@ private fun AppearanceStep(
         ) {
             ReaderTheme.entries.forEach { theme ->
                 val isSelected = theme == selectedTheme
+                val themeName = when (theme) {
+                    ReaderTheme.LIGHT -> if (isFr) "Clair" else "Light"
+                    ReaderTheme.SEPIA -> "Sépia"
+                    ReaderTheme.NIGHT -> if (isFr) "Nuit" else "Night"
+                    ReaderTheme.DYNAMIC -> if (isFr) "Dynamique" else "Dynamic"
+                }
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -186,8 +298,8 @@ private fun AppearanceStep(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = theme.displayName,
-                        fontSize = 13.sp,
+                        text = themeName,
+                        fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         color = if (theme == ReaderTheme.NIGHT) Color.White else Color(0xFF2D3436)
                     )
@@ -195,11 +307,11 @@ private fun AppearanceStep(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // Font size adjustment
         Text(
-            text = "Font Size: ${fontSize.toInt()} sp",
+            text = if (isFr) "Taille de police : ${fontSize.toInt()} sp" else "Font Size: ${fontSize.toInt()} sp",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
@@ -228,7 +340,8 @@ private fun AppearanceStep(
             )
         ) {
             Text(
-                text = "“The whispering forest shaded the mossy trail, illuminated by an ethereal glow.”",
+                text = if (isFr) "« La forêt murmurait sous la brise nocturne, baignée d'une lueur éthérée. »"
+                else "“The whispering forest shaded the mossy trail, illuminated by an ethereal glow.”",
                 fontSize = fontSize.sp,
                 lineHeight = (fontSize * 1.35f).sp,
                 color = when (selectedTheme) {
@@ -245,8 +358,8 @@ private fun AppearanceStep(
 
 @Composable
 private fun VoicesStep(
-    selectedLanguage: String,
-    onLanguageSelected: (String) -> Unit
+    isFr: Boolean,
+    selectedLanguage: String
 ) {
     Column(
         modifier = Modifier
@@ -262,56 +375,45 @@ private fun VoicesStep(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Multi-Voice Narration",
+            text = if (isFr) "Modèles Vocaux IA" else "Neural AI Voice Models",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "NoveLize dynamically maps up to 5 distinct voice profiles to characters and the narrator.",
+            text = if (isFr) "NoveLize utilise de vrais modèles IA neuronaux pour cartographier distinctement le narrateur et les dialogues."
+            else "NoveLize uses real neural AI models to distinctively map narrator and character dialogue.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
         )
 
-        // Primary narration language
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Primary Language",
+                    text = if (isFr) "Modèles Sélectionnés (${if (selectedLanguage == "fr") "Français" else "English"})"
+                    else "Active Models (${if (selectedLanguage == "fr") "French" else "English"})",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    listOf("en" to "English", "fr" to "Français").forEach { (code, label) ->
-                        val isSelected = selectedLanguage == code
-                        OutlinedButton(
-                            onClick = { onLanguageSelected(code) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = if (isSelected) ButtonDefaults.outlinedButtonColors(containerColor = BrandPurple.copy(alpha = 0.1f)) else ButtonDefaults.outlinedButtonColors(),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = Brush.linearGradient(listOf(if (isSelected) BrandPurple else MaterialTheme.colorScheme.outlineVariant, if (isSelected) BrandPurple else MaterialTheme.colorScheme.outlineVariant))
-                            )
-                        ) {
-                            Text(label, color = if (isSelected) BrandPurple else MaterialTheme.colorScheme.onSurface)
-                        }
-                    }
-                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (isFr) "• Narrateur : Modèle équilibré haute clarté\n• Personnage Principal : Timbre héroïque\n• Voix 1 & 2 : Profils féminins et masculins distincts\n• Prise en charge stricte : Français et Anglais uniquement"
+                    else "• Narrator: High-clarity neural model\n• Lead Character: Resonant heroic timbre\n• Roles 1 & 2: Distinct male/female profiles\n• Supported Prose: French & English strictly",
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 22.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // On-device privacy assurance badge
+        // Privacy badge
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = BrandEmerald.copy(alpha = 0.1f)),
@@ -330,13 +432,14 @@ private fun VoicesStep(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "100% On-Device & Private",
+                        text = if (isFr) "100% Local & Sécurisé" else "100% On-Device & Private",
                         fontWeight = FontWeight.Bold,
                         color = BrandEmerald,
                         fontSize = 14.sp
                     )
                     Text(
-                        text = "Voice synthesis and translation run strictly locally. Zero audio or book content leaves your device.",
+                        text = if (isFr) "La synthèse neuronale s'exécute sur votre appareil sans aucune transmission cloud."
+                        else "Neural speech synthesis runs locally with zero cloud telemetry.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -347,80 +450,69 @@ private fun VoicesStep(
 }
 
 @Composable
-private fun OptimalUseStep() {
+private fun OptimalUseStep(isFr: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Visual badge representing 3D headphones
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        listOf(BrandPurpleLight, BrandPurple)
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Headphones,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(54.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
+        Icon(
+            imageVector = Icons.Default.Headphones,
+            contentDescription = null,
+            tint = BrandPurple,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Optimal Performance Notice",
-            style = MaterialTheme.typography.headlineSmall,
+            text = if (isFr) "Prêt pour l'Aventure" else "Ready for the Adventure",
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
         Text(
-            text = "On-device speech synthesis and real-time sound design are resource-intensive. To ensure optimal smoothness:",
+            text = if (isFr) "Conseils pour une expérience immersive maximale."
+            else "Tips for the best audio drama light novel experience.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
         )
-
-        Spacer(modifier = Modifier.height(20.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                GuidelineItem("🎧", "Wear headphones for spatial soundscapes and immersive dialogue.")
-                GuidelineItem("⚡", "Avoid resource-heavy background tasks during long narration sessions.")
-                GuidelineItem("🌙", "Turn off your screen for background listening to conserve battery and RAM.")
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                GuidelineRow(
+                    icon = Icons.Default.Headphones,
+                    title = if (isFr) "Casque ou Écouteurs" else "Use Headphones",
+                    desc = if (isFr) "Les soundscapes et effets sonores sont spatialisés pour une immersion totale."
+                    else "Soundscapes and SFX cues are balanced for spatial immersion."
+                )
+                GuidelineRow(
+                    icon = Icons.Default.VolumeUp,
+                    title = if (isFr) "Effets Sonores Pixabay" else "Pixabay Sound Effects",
+                    desc = if (isFr) "Téléchargez vos sons Pixabay favoris et placez-les dans le dossier SFX de l'application."
+                    else "Download your favourite Pixabay SFX files into the app's SFX folder."
+                )
             }
         }
     }
 }
 
 @Composable
-private fun GuidelineItem(icon: String, text: String) {
+private fun GuidelineRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    desc: String
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = icon, fontSize = 20.sp)
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Icon(icon, contentDescription = null, tint = BrandPurple, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(14.dp))
+        Column {
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

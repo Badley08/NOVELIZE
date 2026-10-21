@@ -25,23 +25,25 @@ Long-pressing any word in a passage opens a contextual action dialog:
 
 ---
 
-## Local Multi-Voice Audio Drama
+## Local Multi-Voice Audio Drama (Neural AI Models)
 
-* **Automatic dialogue speaker assignment:** Detects dialogue segments (`«...»`, `"..."`, dashes `—`) and maps distinct voice profiles across 5 speaker roles:
+* **Real Neural AI voice models:** Exclusively supports French and English literary texts using dedicated neural voice models (Piper/VITS neural architectures) mapped across 5 speaker roles:
   * Narrator (neutral pitch and balanced cadence)
   * Lead Character (slightly lower pitch, dynamic tempo)
   * Female Voice 1 (higher pitch, clear articulation)
   * Male Voice 1 (deep resonance, steady cadence)
   * Supporting Characters (varied timbre)
-* **On-device text-to-speech:** Voice synthesis runs locally with zero telemetry and zero cloud dependencies.
-* **Language adaptation:** English and French files are narrated with language-appropriate voice models.
+* **Strict language restriction:** Text in languages other than French or English is automatically refused and flagged to prevent degraded synthesis.
+* **Continuous background playback:** Powered by an Android `ForegroundService` with media notifications and lock-screen controls.
+* **On-device execution:** 100% private, zero telemetry, and zero cloud dependencies.
 
 ---
 
-## Contextual Sound Design (SFX)
+## Contextual Sound Design (50 SFX Checklist)
 
-* **Real-time soundscapes:** Keyword beats trigger short acoustic sound effects (e.g., sword clash, sword slash, spells, footsteps) synchronized with narration.
-* **SoundPool integration:** Effects are preloaded in Android's `SoundPool` for latency-free playback alongside speech synthesis.
+* **50-item sound effect catalog:** Covers combat, magic, ambient loops, places, mood/tension, and travel.
+* **Local Pixabay sound storage:** Automatically detects and loads user-downloaded Pixabay MP3/OGG sound files placed in the app directory (`/Android/data/com.karlitodev.novelize/files/sfx/`).
+* **SoundPool & ambient MediaPlayer integration:** One-shot effects play via low-latency `SoundPool`, while ambient soundscapes loop seamlessly via `MediaPlayer`.
 * **Volume balancing:** Separate volume sliders for SFX and ambient loops in settings.
 
 ---

@@ -119,7 +119,7 @@ fun ReaderScreen(
                         )
                         narrationState.activeAmbientTitle?.let { ambient ->
                             Text(
-                                text = "🌧️ $ambient",
+                                text = "Ambient: $ambient",
                                 fontSize = 11.sp,
                                 color = BrandTeal
                             )
@@ -275,10 +275,8 @@ fun ReaderScreen(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "⚔️", fontSize = 14.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = sfxTitle,
+                            text = "SFX: $sfxTitle",
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -537,13 +535,7 @@ private fun ParagraphView(
                 modifier = Modifier.padding(bottom = 4.dp)
             ) {
                 Text(
-                    text = when (paragraph.speakerRole) {
-                        SpeakerRole.HERO -> "🗡️ ${paragraph.speakerRole.displayName}"
-                        SpeakerRole.FEMALE_1 -> "✨ ${paragraph.speakerRole.displayName}"
-                        SpeakerRole.MALE_1 -> "🛡️ ${paragraph.speakerRole.displayName}"
-                        SpeakerRole.SUPPORTING -> "📜 ${paragraph.speakerRole.displayName}"
-                        else -> paragraph.speakerRole.displayName
-                    },
+                    text = paragraph.speakerRole.displayName,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = BrandPurpleLight
@@ -551,7 +543,7 @@ private fun ParagraphView(
                 if (isMarkedStop) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "📍 Stopped Here",
+                        text = "Stopped Here",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = BrandCoral
@@ -631,13 +623,17 @@ private fun PlayerBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Speaker badge
+                // Speaker & AI Model badge
                 Surface(
                     color = BrandPurple.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(12.dp)
                 ) {
+                    val label = narrationState.activeAiVoiceModelName?.let {
+                        "IA: $it"
+                    } ?: "Voix: ${narrationState.currentSpeaker.displayName}"
+
                     Text(
-                        text = "Voice: ${narrationState.currentSpeaker.displayName}",
+                        text = label,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = BrandPurple,
@@ -648,12 +644,22 @@ private fun PlayerBar(
                 // Sleep timer countdown if active
                 narrationState.sleepTimerRemainingSeconds?.let { remaining ->
                     Text(
-                        text = "🌙 ${remaining / 60}m ${remaining % 60}s",
+                        text = "Timer: ${remaining / 60}m ${remaining % 60}s",
                         fontSize = 12.sp,
                         color = BrandAmber,
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
+
+            narrationState.unsupportedLanguageNotice?.let { notice ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "⚠️ $notice",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
