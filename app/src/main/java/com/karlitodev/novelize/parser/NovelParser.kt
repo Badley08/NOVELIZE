@@ -4,10 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
-import com.tomroush.pdfbox.android.PDFBoxResourceLoader
-import com.tomroush.pdfbox.pdmodel.PDDocument
-import com.tomroush.pdfbox.text.PDFTextStripper
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import com.karlitodev.novelize.model.Book
 import com.karlitodev.novelize.model.Chapter
 import com.karlitodev.novelize.model.DocumentFormat
@@ -48,6 +47,54 @@ class DefaultNovelParser(private val context: Context? = null) : NovelParser {
 
     private val sentenceSplitPattern = Pattern.compile("(?<=[.!?…])\\s+")
 
+    companion object {
+        // Regex patterns for detecting Feminine indicators and names across FR, JP, KR, EN
+        private val FEMININE_PATTERN = Pattern.compile(
+            """(?i)\b(?:""" +
+            // FR Feminine: pronouns, inquit tags, titles, common names
+            """elle|la jeune fille|la femme|la dame|la reine|la princesse|madame|mademoiselle|chère|""" +
+            """(?:dit|demanda|répondit|cria|chuchota|s'écria|fit|pensa)-t-elle|""" +
+            """(?:Marie|Sophie|Camille|Sarah|Emma|Julie|Lucie|Léa|Chloé|Claire|Juliette|Jeanne|Alice|Manon|Charlotte|Inès|Élodie|Aurélie|Mathilde|Audrey|Diane|Hélène|Émilie|Valérie|Margaux|Céline)|""" +
+            // EN Feminine: pronouns, inquit tags, titles, common names
+            """she|the girl|the woman|the lady|the queen|the princess|mrs\.|miss|ms\.|""" +
+            """(?:she said|she asked|she replied|she whispered|she cried|said she|asked she)|""" +
+            """(?:Mary|Sarah|Emma|Olivia|Elizabeth|Emily|Jessica|Anna|Grace|Lily|Sophia|Chloe|Mia|Ava|Isabella|Harper|Ella|Amelia|Victoria|Rachel|Diana|Alice|Lucy|Margaret|Rose)|""" +
+            // JP Feminine: pronouns, honorifics, endings (-ko, -mi, -ka, -na, -ri, -ne, -sa, -yo, -e), anime/novel heroines
+            """kanojo|shoujo|joshi|onna|彼女|少女|女性|""" +
+            """\w+-(?:chan|san|sama)|""" +
+            """(?:[A-Z][a-z]*(?:ko|mi|ka|na|ri|ne|sa|yo|e))|""" +
+            """(?:Sakura|Hinata|Mikasa|Asuka|Nami|Robin|Yui|Tsunade|Erza|Lucy|Kagura|Kagome|Akane|Megumi|Chitoge|Taiga|Saber|Rin|Rem|Ram|Emilia)|""" +
+            // KR Feminine: pronouns, honorifics, endings, novel/webtoon names
+            """geunyeo|sonyeo|unnie|noona|그녀|소녀|언니|누나|""" +
+            """(?:[A-Z][a-z]*(?:-jin|-eun|-ji|-young|-min|-hye|-yoon|-so|-ha|-rin|-won))|""" +
+            """(?:Ji-soo|Min-ji|Eun-ji|Seo-yeon|Yu-jin|Hye-jin|So-hee|Chae-young|Ye-ji|Sun-hee|Da-eun|Cha Hae-In|Hae-In|Ye-won|Soo-jin|Bo-ra)""" +
+            """)\b"""
+        )
+
+        // Regex patterns for detecting Masculine indicators and names across FR, JP, KR, EN
+        private val MASCULINE_PATTERN = Pattern.compile(
+            """(?i)\b(?:""" +
+            // FR Masculine: pronouns, inquit tags, titles, common names
+            """il|le jeune homme|l'homme|le monsieur|le roi|le prince|le seigneur|le chevalier|cher|""" +
+            """(?:dit|demanda|répondit|cria|chuchota|s'écria|fit|pensa)-t-il|""" +
+            """(?:Pierre|Jean|Marc|Thomas|Lucas|Julien|Nicolas|Alexandre|Arthur|Gabriel|Louis|Paul|Antoine|Maxime|Hugo|Théo|Romain|Clément|Sébastien|Damien|Laurent|François|David|Michel)|""" +
+            // EN Masculine: pronouns, inquit tags, titles, common names
+            """he|the boy|the man|the lord|the king|the prince|the knight|mr\.|sir|""" +
+            """(?:he said|he asked|he replied|he whispered|he cried|said he|asked he)|""" +
+            """(?:John|James|David|Michael|William|Robert|Arthur|Jack|Harry|George|Thomas|Edward|Alexander|Daniel|Henry|Matthew|Oliver|Samuel|Benjamin|Lucas|Richard|Charles|Joseph)|""" +
+            // JP Masculine: pronouns, honorifics, endings (-ro, -to, -shi, -ya, -ke, -ki, -ta, -ru, -o), anime/novel heroes
+            """kare|shounen|danshi|otoko|boku|ore|彼|少年|男性|僕|俺|""" +
+            """\w+-kun|""" +
+            """(?:[A-Z][a-z]*(?:ro|to|shi|ya|ke|ki|ta|ru|o))|""" +
+            """(?:Naruto|Sasuke|Ichigo|Luffy|Zoro|Tanjiro|Kenji|Taro|Kazuma|Eren|Levi|Kakashi|Goku|Vegeta|Killua|Gon|Light|Gintoki|Deku|Bakugo|Todoroki)|""" +
+            // KR Masculine: pronouns, honorifics, endings, novel/webtoon names
+            """geu|sonyeon|oppa|hyung|그|소년|오빠|형|""" +
+            """(?:[A-Z][a-z]*(?:-jun|-woo|-ho|-hyun|-seok|-hoon|-tae|-sik))|""" +
+            """(?:Jin-woo|Min-jun|Do-hyun|Sung-jin|Jung-woo|Hyun-woo|Ji-hoon|Tae-hyung|Jung-kook|Seok-jin|Nam-joon|Jimin|Kang-tae|Woo-jin|Sang-woo)""" +
+            """)\b"""
+        )
+    }
+
     override fun parse(content: String, title: String): List<Chapter> {
         val lines = content.lines()
         val chapters = mutableListOf<Chapter>()
@@ -55,7 +102,9 @@ class DefaultNovelParser(private val context: Context? = null) : NovelParser {
         var currentChapterTitle = "Prologue"
         var currentChapterIndex = 1
         val currentParagraphs = mutableListOf<Paragraph>()
-        var speakerToggle = false
+        var maleVoiceToggle = false
+        var femaleVoiceToggle = false
+        var genericGenderToggle = false
 
         fun flushChapter() {
             if (currentParagraphs.isNotEmpty()) {
@@ -92,11 +141,33 @@ class DefaultNovelParser(private val context: Context? = null) : NovelParser {
                 continue
             }
 
-            // Determine if paragraph represents dialogue
+            // Determine dialogue speaker using multi-language gender regex (FR, JP, KR, EN)
             val isDialogue = isDialogueParagraph(trimmed)
             val speaker = if (isDialogue) {
-                speakerToggle = !speakerToggle
-                if (speakerToggle) SpeakerRole.HERO else SpeakerRole.FEMALE_1
+                val hasFemale = FEMININE_PATTERN.matcher(trimmed).find()
+                val hasMale = MASCULINE_PATTERN.matcher(trimmed).find()
+
+                when {
+                    hasFemale && !hasMale -> {
+                        femaleVoiceToggle = !femaleVoiceToggle
+                        if (femaleVoiceToggle) SpeakerRole.FEMALE_1 else SpeakerRole.FEMALE_2
+                    }
+                    hasMale && !hasFemale -> {
+                        maleVoiceToggle = !maleVoiceToggle
+                        if (maleVoiceToggle) SpeakerRole.MALE_1 else SpeakerRole.MALE_2
+                    }
+                    else -> {
+                        // Ambiguous dialogue or alternating conversation: alternate between male & female pairs
+                        genericGenderToggle = !genericGenderToggle
+                        if (genericGenderToggle) {
+                            maleVoiceToggle = !maleVoiceToggle
+                            if (maleVoiceToggle) SpeakerRole.MALE_1 else SpeakerRole.MALE_2
+                        } else {
+                            femaleVoiceToggle = !femaleVoiceToggle
+                            if (femaleVoiceToggle) SpeakerRole.FEMALE_1 else SpeakerRole.FEMALE_2
+                        }
+                    }
+                }
             } else {
                 SpeakerRole.NARRATOR
             }

@@ -82,6 +82,22 @@ class AiVoiceEngine(
                 modelFileName = "en_US-danny-low.onnx",
                 configFileName = "en_US-danny-low.json"
             ),
+            NeuralVoiceModel(
+                id = "piper_en_female2",
+                name = "Piper Samantha (Female Voice 2)",
+                language = "en",
+                speakerRole = SpeakerRole.FEMALE_2,
+                modelFileName = "en_US-amy-medium.onnx",
+                configFileName = "en_US-amy-medium.json"
+            ),
+            NeuralVoiceModel(
+                id = "piper_en_male2",
+                name = "Piper Michael (Male Voice 2)",
+                language = "en",
+                speakerRole = SpeakerRole.MALE_2,
+                modelFileName = "en_US-danny-low.onnx",
+                configFileName = "en_US-danny-low.json"
+            ),
 
             // French Neural Models
             NeuralVoiceModel(
@@ -109,12 +125,28 @@ class AiVoiceEngine(
                 configFileName = "fr_FR-siwis-medium.json"
             ),
             NeuralVoiceModel(
+                id = "piper_fr_female2",
+                name = "Piper Juliette (Voix Féminine 2)",
+                language = "fr",
+                speakerRole = SpeakerRole.FEMALE_2,
+                modelFileName = "fr_FR-siwis-medium.onnx",
+                configFileName = "fr_FR-siwis-medium.json"
+            ),
+            NeuralVoiceModel(
                 id = "piper_fr_male1",
                 name = "Piper Gilles (Voix Masculine 1)",
                 language = "fr",
                 speakerRole = SpeakerRole.MALE_1,
                 modelFileName = "fr_FR-gilles-low.onnx",
                 configFileName = "fr_FR-gilles-low.json"
+            ),
+            NeuralVoiceModel(
+                id = "piper_fr_male2",
+                name = "Piper Alexandre (Voix Masculine 2)",
+                language = "fr",
+                speakerRole = SpeakerRole.MALE_2,
+                modelFileName = "fr_FR-tom-medium.onnx",
+                configFileName = "fr_FR-tom-medium.json"
             ),
             NeuralVoiceModel(
                 id = "piper_fr_supporting",
@@ -162,7 +194,12 @@ class AiVoiceEngine(
      */
     fun getModelForRole(role: SpeakerRole, language: String): NeuralVoiceModel {
         val targetLang = language.lowercase().take(2)
-        return MODELS.firstOrNull { it.language == targetLang && it.speakerRole == role }
+        val mappedRole = when (role) {
+            SpeakerRole.HERO -> SpeakerRole.MALE_1
+            SpeakerRole.SUPPORTING -> SpeakerRole.MALE_2
+            else -> role
+        }
+        return MODELS.firstOrNull { it.language == targetLang && (it.speakerRole == mappedRole || it.speakerRole == role) }
             ?: MODELS.first { it.language == targetLang && it.speakerRole == SpeakerRole.NARRATOR }
     }
 

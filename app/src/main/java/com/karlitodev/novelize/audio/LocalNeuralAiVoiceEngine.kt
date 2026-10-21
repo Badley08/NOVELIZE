@@ -209,27 +209,27 @@ class LocalNeuralAiVoiceEngine(
         val locale = if (language.startsWith("fr", ignoreCase = true)) Locale.FRENCH else Locale.ENGLISH
         tts.language = locale
 
-        // Customized acoustic profiles per speaker role
+        // Customized acoustic profiles: 2 male voices, 2 female voices, 1 narrator
         when (role) {
             SpeakerRole.NARRATOR -> {
                 tts.setPitch(1.0f)
                 tts.setSpeechRate(1.0f * playbackSpeed)
             }
-            SpeakerRole.HERO -> {
-                tts.setPitch(1.08f)
-                tts.setSpeechRate(1.04f * playbackSpeed)
+            SpeakerRole.MALE_1, SpeakerRole.HERO -> {
+                tts.setPitch(0.88f)
+                tts.setSpeechRate(1.02f * playbackSpeed)
+            }
+            SpeakerRole.MALE_2, SpeakerRole.SUPPORTING -> {
+                tts.setPitch(0.72f)
+                tts.setSpeechRate(0.94f * playbackSpeed)
             }
             SpeakerRole.FEMALE_1 -> {
-                tts.setPitch(1.24f)
+                tts.setPitch(1.20f)
                 tts.setSpeechRate(1.0f * playbackSpeed)
             }
-            SpeakerRole.MALE_1 -> {
-                tts.setPitch(0.82f)
-                tts.setSpeechRate(0.96f * playbackSpeed)
-            }
-            SpeakerRole.SUPPORTING -> {
-                tts.setPitch(0.72f)
-                tts.setSpeechRate(0.92f * playbackSpeed)
+            SpeakerRole.FEMALE_2 -> {
+                tts.setPitch(1.35f)
+                tts.setSpeechRate(1.06f * playbackSpeed)
             }
         }
 
@@ -401,10 +401,10 @@ class LocalNeuralAiVoiceEngine(
 
         val baseFrequency = when (role) {
             SpeakerRole.NARRATOR -> 135.0
-            SpeakerRole.HERO -> 118.0
+            SpeakerRole.HERO, SpeakerRole.MALE_1 -> 118.0
+            SpeakerRole.MALE_2, SpeakerRole.SUPPORTING -> 92.0
             SpeakerRole.FEMALE_1 -> 220.0
-            SpeakerRole.MALE_1 -> 98.0
-            SpeakerRole.SUPPORTING -> 160.0
+            SpeakerRole.FEMALE_2 -> 255.0
         }
 
         var phase = 0.0

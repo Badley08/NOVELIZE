@@ -3,6 +3,16 @@
 Toutes les modifications notables de ce projet sont documentees dans ce fichier.
 Ce journal ne contient aucun emoji conformement aux exigences de versionnage.
 
+## [1.3] - 2026-10-21
+
+### Nouveautes
+- Detection multilingue par expressions regulieres (Regex) du genre des personnages (masculin et feminin) pour les langues francaise (FR), japonaise (JP), coreenne (KR) et anglaise (EN).
+- Attribution dynamique de 4 voix de personnages distinctes (2 voix masculines : MALE_1 et MALE_2, 2 voix feminines : FEMALE_1 et FEMALE_2) en plus du narrateur, avec reglages acoustiques differencies de hauteur tonale (pitch) et de cadence.
+- Extension du moteur vocal neural local et IA (Piper) pour supporter les modeles de voix secondaires masculins et feminins en francais et en anglais.
+
+### Corrections et Optimisations
+- Correction de l'importation de la bibliotheque PDFBox-Android (com.tom_roush.pdfbox) resolvant l'erreur de compilation en integration continue.
+
 ## [1.2] - 2026-10-21
 
 ### Nouveautes

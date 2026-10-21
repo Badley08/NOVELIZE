@@ -48,8 +48,10 @@ data class Chapter(
 enum class SpeakerRole(val displayName: String) {
     NARRATOR("Narrator"),
     HERO("Lead Character"),
-    FEMALE_1("Female Voice 1"),
     MALE_1("Male Voice 1"),
+    MALE_2("Male Voice 2"),
+    FEMALE_1("Female Voice 1"),
+    FEMALE_2("Female Voice 2"),
     SUPPORTING("Supporting Character")
 }
 
