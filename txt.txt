@@ -1,1 +1,1 @@
-continue fait en sorte que le son des sfx ne se melange pas avec narration et autres de le mettre comme un background sound
+
