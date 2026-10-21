@@ -9,10 +9,10 @@ android {
     compileSdk = 37
     defaultConfig {
         applicationId = "com.karlitodev.novelize"
-        minSdk = 26
+        minSdk = 28
         targetSdk = 37
         maxSdk = 37
-        versionCode = 1.1
+        versionCode = 11
         versionName = "1.1"
         // Permanent unique identifier for this application build, used for analytics
         // and crash report correlation. Generated once and never changes between releases.
