@@ -54,6 +54,7 @@ fun LibraryScreen(
     val updateManager = remember { com.karlitodev.novelize.update.UpdateManager(context) }
     val updateState by updateManager.state.collectAsState()
 
+    val coroutineScope = rememberCoroutineScope()
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = All, 1 = Favorites
     var bookPendingDelete by remember { mutableStateOf<Book?>(null) }
 
@@ -155,7 +156,7 @@ fun LibraryScreen(
                             Text("New version published on GitHub", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                         }
                         FilledTonalButton(
-                            onClick = { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { updateManager.downloadAndInstall(update.release) } },
+                            onClick = { coroutineScope.launch { updateManager.downloadAndInstall(update.release) } },
                             colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color.White, contentColor = BrandPurple),
                             shape = RoundedCornerShape(8.dp)
                         ) {

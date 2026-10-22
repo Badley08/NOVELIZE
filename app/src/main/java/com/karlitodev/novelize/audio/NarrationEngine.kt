@@ -131,7 +131,14 @@ class NarrationEngine(
         }
     }
 
-    override fun play() {
+    // PlaybackController interface — notification/media button callbacks
+    override fun onPlay()  { play() }
+    override fun onPause() { pause() }
+    override fun onNext()  { next() }
+    override fun onPrev()  { previous() }
+    override fun onStop()  { pause(); NarrationPlaybackService.stopService(context) }
+
+    fun play() {
         val chapter = activeChapter ?: return
         if (chapter.paragraphs.isEmpty()) return
 
@@ -142,7 +149,7 @@ class NarrationEngine(
         speakCurrentSentence()
     }
 
-    override fun pause() {
+    fun pause() {
         tts?.stop()
         voiceProfileManager.abandonAudioFocus()
         _state.value = _state.value.copy(isPlaying = false)
@@ -321,10 +328,10 @@ class NarrationEngine(
 
     private fun updateNotification(isPlaying: Boolean) {
         val chapter = activeChapter ?: return
-        NarrationPlaybackService.start(
+        NarrationPlaybackService.startService(
             context = context,
-            bookTitle = chapter.title,
-            chapterTitle = "Chapter ${chapter.chapterIndex}",
+            title = chapter.title,
+            subtitle = "Chapter ${chapter.chapterIndex}",
             isPlaying = isPlaying
         )
     }
@@ -335,6 +342,6 @@ class NarrationEngine(
         tts?.shutdown()
         tts = null
         voiceProfileManager.abandonAudioFocus()
-        NarrationPlaybackService.stop(context)
+        NarrationPlaybackService.stopService(context)
     }
 }

@@ -651,7 +651,6 @@ private fun ParagraphView(
                                             onLongClick = { onWordLongPress(cleanWord, sIndex) }
                                         )
                                         .padding(horizontal = 1.dp)
-                                DangerouslyLongOperationProtection
                                 )
                             }
                         }
