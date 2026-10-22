@@ -4,74 +4,93 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Premium NoveLize Emblem: Dynamic Open Book + Acoustic Sonic Wings + Beacon Spark -->
+    <!-- NoveLize 2.1 Modern Brand Emblem: Dynamic Open Folio + Pulse Wave Arc + Radiant Star -->
 
-    <!-- Left Page / Wing: Sleek curved gradient ribbon -->
-    <path
-        android:fillColor="#8B5CF6"
-        android:pathData="M54,68 C45,68 34,63 28,57 C28,45 36,40 50,49 L54,52 Z" />
-
-    <!-- Left Page Inner Highlight -->
-    <path
-        android:fillColor="#A78BFA"
-        android:pathData="M54,64 C46,64 36,60 31,55 C33,47 40,44 50,51 L54,53 Z" />
-
-    <!-- Right Page / Wing: Vibrant cyan/violet ribbon -->
-    <path
-        android:fillColor="#6366F1"
-        android:pathData="M54,68 C63,68 74,63 80,57 C80,45 72,40 58,49 L54,52 Z" />
-
-    <!-- Right Page Inner Highlight -->
-    <path
-        android:fillColor="#38BDF8"
-        android:pathData="M54,64 C62,64 72,60 77,55 C75,47 68,44 58,51 L54,53 Z" />
-
-    <!-- Book Spine / Central Pillar -->
-    <path
-        android:fillColor="#DDD6FE"
-        android:pathData="M52.5,49 L55.5,49 L55,73 L53,73 Z" />
-
-    <!-- Floating Soundwave Bar 1 (Left - Short) -->
-    <path
-        android:fillColor="#A78BFA"
-        android:pathData="M38,39 L40,39 L40,45 L38,45 Z" />
-
-    <!-- Floating Soundwave Bar 2 (Left - Medium) -->
-    <path
-        android:fillColor="#C4B5FD"
-        android:pathData="M43,34 L45,34 L45,46 L43,46 Z" />
-
-    <!-- Floating Soundwave Bar 3 (Center-Left - Tall) -->
-    <path
-        android:fillColor="#38BDF8"
-        android:pathData="M48,29 L50,29 L50,47 L48,47 Z" />
-
-    <!-- Floating Soundwave Bar 4 (Center-Right - Tall) -->
-    <path
-        android:fillColor="#38BDF8"
-        android:pathData="M58,29 L60,29 L60,47 L58,47 Z" />
-
-    <!-- Floating Soundwave Bar 5 (Right - Medium) -->
-    <path
-        android:fillColor="#C4B5FD"
-        android:pathData="M63,34 L65,34 L65,46 L63,46 Z" />
-
-    <!-- Floating Soundwave Bar 6 (Right - Short) -->
-    <path
-        android:fillColor="#A78BFA"
-        android:pathData="M68,39 L70,39 L70,45 L68,45 Z" />
-
-    <!-- Central Story Spark / Luminous Diamond -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,23 L56.5,29 L62.5,31.5 L56.5,34 L54,40 L51.5,34 L45.5,31.5 L51.5,29 Z" />
-
-    <!-- Subtle Headphone Arc cresting over top -->
+    <!-- Outer Sonic Resonance Glow Ring -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M32,53 C30,34 78,34 76,53"
+        android:pathData="M26,56 C26,38 82,38 82,56"
         android:strokeWidth="2.5"
-        android:strokeColor="#EDE9FE"
+        android:strokeColor="#A855F7"
         android:strokeLineCap="round" />
+
+    <!-- Secondary Sonic Wave Ring -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M32,54 C32,41 76,41 76,54"
+        android:strokeWidth="2"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+
+    <!-- Open Book Left Folio (Curved Deep Violet / Indigo) -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M54,72 C44,72 32,66 25,60 C25,48 35,44 51,52 L54,55 Z" />
+
+    <!-- Left Folio Inner Light Shimmer -->
+    <path
+        android:fillColor="#9333EA"
+        android:pathData="M54,68 C45,68 35,63 29,58 C32,50 39,47 50,54 L54,56 Z" />
+
+    <!-- Open Book Right Folio (Curved Electric Cyan / Purple) -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M54,72 C64,72 76,66 83,60 C83,48 73,44 57,52 L54,55 Z" />
+
+    <!-- Right Folio Inner Light Shimmer -->
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M54,68 C63,68 73,63 79,58 C76,50 69,47 58,54 L54,56 Z" />
+
+    <!-- Book Spine Ribbon Core -->
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M52.5,52 L55.5,52 L55,77 L53,77 Z" />
+
+    <!-- Bookmark Ribbon Notch -->
+    <path
+        android:fillColor="#EC4899"
+        android:pathData="M53,68 L55,68 L55,79 L54,77.5 L53,79 Z" />
+
+    <!-- Central Audio Frequency Bars -->
+    <!-- Bar 1 Left -->
+    <path
+        android:fillColor="#C084FC"
+        android:pathData="M37,42 L39.5,42 L39.5,49 L37,49 Z" />
+
+    <!-- Bar 2 Left -->
+    <path
+        android:fillColor="#E879F9"
+        android:pathData="M42,36 L44.5,36 L44.5,50 L42,50 Z" />
+
+    <!-- Bar 3 Center Left -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M47,30 L49.5,30 L49.5,52 L47,52 Z" />
+
+    <!-- Bar 4 Center Right -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M58.5,30 L61,30 L61,52 L58.5,52 Z" />
+
+    <!-- Bar 5 Right -->
+    <path
+        android:fillColor="#E879F9"
+        android:pathData="M63.5,36 L66,36 L66,50 L63.5,50 Z" />
+
+    <!-- Bar 6 Right -->
+    <path
+        android:fillColor="#C084FC"
+        android:pathData="M68.5,42 L71,42 L71,49 L68.5,49 Z" />
+
+    <!-- Radiant Storyteller Star (Top Spark) -->
+    <path
+        android:fillColor="#FDE047"
+        android:pathData="M54,21 L56.2,27.5 L62.5,29.8 L56.2,32 L54,38.5 L51.8,32 L45.5,29.8 L51.8,27.5 Z" />
+
+    <!-- Center Core Glow -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,27 C55.5,27 56.8,28.3 56.8,29.8 C56.8,31.3 55.5,32.6 54,32.6 C52.5,32.6 51.2,31.3 51.2,29.8 C51.2,28.3 52.5,27 54,27 Z" />
 
 </vector>

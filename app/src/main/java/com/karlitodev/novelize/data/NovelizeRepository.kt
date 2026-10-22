@@ -60,6 +60,9 @@ interface NovelizeRepository {
     suspend fun addHighlight(highlight: TextHighlight)
     suspend fun updatePreferences(preferences: UserPreferences)
     suspend fun addBook(book: Book, chapters: List<Chapter>)
+    suspend fun deleteBook(bookId: String)
+    suspend fun toggleFavorite(bookId: String)
+    fun isWizardCompleted(): Boolean
 }
 
 /**
@@ -135,6 +138,9 @@ class DefaultNovelizeRepository(
                         language = obj.optString("lang", "en"),
                         totalChapters = obj.getInt("totalChapters"),
                         readingProgressPercent = obj.optDouble("progressPercent", 0.0).toFloat(),
+                        isFavorite = obj.optBoolean("isFavorite", false),
+                        lastReadChapterIndex = obj.optInt("lastChapter", 1),
+                        lastReadParagraphIndex = obj.optInt("lastParagraph", 0),
                         lastReadTimestamp = obj.optLong("lastRead", System.currentTimeMillis())
                     )
                 )
@@ -162,6 +168,9 @@ class DefaultNovelizeRepository(
                     obj.put("lang", b.language)
                     obj.put("totalChapters", b.totalChapters)
                     obj.put("progressPercent", b.readingProgressPercent.toDouble())
+                    obj.put("isFavorite", b.isFavorite)
+                    obj.put("lastChapter", b.lastReadChapterIndex)
+                    obj.put("lastParagraph", b.lastReadParagraphIndex)
                     obj.put("lastRead", b.lastReadTimestamp)
                     array.put(obj)
                 }
@@ -319,13 +328,15 @@ class DefaultNovelizeRepository(
             apply()
         }
 
-        // Update last read timestamp on book
+        // Update last read timestamp and exact position on book
         val currentList = _books.value.toMutableList()
         val index = currentList.indexOfFirst { it.id == progress.bookId }
         if (index != -1) {
             currentList[index] = currentList[index].copy(
                 lastReadTimestamp = System.currentTimeMillis(),
-                readingProgressPercent = progress.progressPercentage
+                readingProgressPercent = progress.progressPercentage,
+                lastReadChapterIndex = progress.chapterIndex,
+                lastReadParagraphIndex = progress.paragraphIndex
             )
             _books.value = currentList
             persistBooks(currentList)
@@ -361,5 +372,37 @@ class DefaultNovelizeRepository(
         _books.value = updated
         persistBooks(updated)
         persistChapters(book.id, chapters)
+    }
+
+    override suspend fun deleteBook(bookId: String) {
+        chapterCache.remove(bookId)
+        progressCache.remove(bookId)
+        val updated = _books.value.filterNot { it.id == bookId }
+        _books.value = updated
+        persistBooks(updated)
+
+        if (context != null) {
+            scope.launch {
+                try {
+                    File(context.filesDir, "chapters_${bookId}.json").delete()
+                    File(context.filesDir, "covers/${bookId}.jpg").delete()
+                    prefs?.edit()?.remove("progress_$bookId")?.apply()
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    override suspend fun toggleFavorite(bookId: String) {
+        val currentList = _books.value.toMutableList()
+        val index = currentList.indexOfFirst { it.id == bookId }
+        if (index != -1) {
+            currentList[index] = currentList[index].copy(isFavorite = !currentList[index].isFavorite)
+            _books.value = currentList
+            persistBooks(currentList)
+        }
+    }
+
+    override fun isWizardCompleted(): Boolean {
+        return prefs?.getBoolean("wizard_completed", false) ?: _preferences.value.isWizardCompleted
     }
 }

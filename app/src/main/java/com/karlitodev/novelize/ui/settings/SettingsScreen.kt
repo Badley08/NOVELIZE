@@ -13,16 +13,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.karlitodev.novelize.R
-import com.karlitodev.novelize.audio.SfxAudioPlayer
+import com.karlitodev.novelize.audio.VoicePreset
 import com.karlitodev.novelize.data.ReaderTheme
 import com.karlitodev.novelize.data.UserPreferences
 import com.karlitodev.novelize.theme.BrandAmber
@@ -48,7 +45,7 @@ import com.karlitodev.novelize.update.UpdateState
 import kotlinx.coroutines.launch
 
 /**
- * Settings screen configuring themes, sound design, multi-voice engine,
+ * Settings screen configuring themes, 4 native TTS voice presets,
  * UI language, and author information.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,8 +60,6 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val updateManager = remember { UpdateManager(context) }
     val updateState by updateManager.state.collectAsState()
-    val sfxAudioPlayer = remember { SfxAudioPlayer(context) }
-    var detectedSfxCount by remember { mutableIntStateOf(sfxAudioPlayer.getDetectedCount()) }
 
     val isFr = preferences.appLanguage == "fr"
 
@@ -329,10 +324,10 @@ fun SettingsScreen(
                 }
             }
 
-            // Audio & SFX settings
+            // Native TTS Voice selection (4 voices: 2 Female, 2 Male)
             SettingsSectionHeader(
-                icon = Icons.Default.VolumeUp,
-                title = if (isFr) "Sound Design & Effets Pixabay" else "Sound Design & Pixabay SFX"
+                icon = Icons.Default.RecordVoiceOver,
+                title = if (isFr) "Voix Text-To-Speech (4 Voix Optimisées)" else "TTS Voices (4 Optimized Voices)"
             )
 
             Card(
@@ -340,89 +335,63 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(if (isFr) "Effets sonores contextuels (SFX)" else "Contextual SFX Audio", fontWeight = FontWeight.SemiBold)
-                        Switch(
-                            checked = preferences.sfxEnabled,
-                            onCheckedChange = { onPreferencesChange(preferences.copy(sfxEnabled = it)) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = BrandPurple)
-                        )
-                    }
+                    Text(
+                        text = if (isFr) "Choisissez votre profil vocal préféré pour la lecture :"
+                        else "Choose your preferred narration voice profile:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    if (preferences.sfxEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = if (isFr) "Volume SFX : ${(preferences.sfxVolume * 100).toInt()}%" else "SFX Volume: ${(preferences.sfxVolume * 100).toInt()}%",
-                            fontSize = 13.sp
-                        )
-                        Slider(
-                            value = preferences.sfxVolume,
-                            onValueChange = { onPreferencesChange(preferences.copy(sfxVolume = it)) },
-                            valueRange = 0f..1f,
-                            colors = SliderDefaults.colors(thumbColor = BrandPurple, activeTrackColor = BrandPurple)
-                        )
+                    VoicePreset.entries.forEach { preset ->
+                        val isSelected = preferences.selectedVoicePack == preset.id ||
+                            (preferences.selectedVoicePack.startsWith("piper") && preset == VoicePreset.FEMALE_1)
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (isFr) "Volume Ambiance : ${(preferences.ambientVolume * 100).toInt()}%" else "Ambient Volume: ${(preferences.ambientVolume * 100).toInt()}%",
-                            fontSize = 13.sp
-                        )
-                        Slider(
-                            value = preferences.ambientVolume,
-                            onValueChange = { onPreferencesChange(preferences.copy(ambientVolume = it)) },
-                            valueRange = 0f..1f,
-                            colors = SliderDefaults.colors(thumbColor = BrandPurple, activeTrackColor = BrandPurple)
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Pixabay sounds directory info & rescan
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable { onPreferencesChange(preferences.copy(selectedVoicePack = preset.id)) },
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) BrandPurple.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            )
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { onPreferencesChange(preferences.copy(selectedVoicePack = preset.id)) },
+                                    colors = RadioButtonDefaults.colors(selectedColor = BrandPurple)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Folder, contentDescription = null, tint = BrandPurple, modifier = Modifier.size(20.dp))
+                                        Text(preset.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = if (isFr) "Sons Pixabay : $detectedSfxCount / 50 détectés" else "Pixabay SFX: $detectedSfxCount / 50 detected",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.sp
-                                        )
+                                        Surface(
+                                            color = if (preset.gender == "F") BrandPurpleLight.copy(alpha = 0.2f) else BrandAmber.copy(alpha = 0.2f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = if (preset.gender == "F") "Féminine" else "Masculine",
+                                                color = if (preset.gender == "F") BrandPurple else BrandAmber,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
-
-                                    IconButton(onClick = {
-                                        sfxAudioPlayer.reloadAudioResources()
-                                        detectedSfxCount = sfxAudioPlayer.getDetectedCount()
-                                    }) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "Rescan", tint = BrandPurple)
-                                    }
+                                    Text(
+                                        text = preset.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (isFr) "Placez vos fichiers MP3 téléchargés depuis Pixabay dans :"
-                                    else "Place your Pixabay downloaded sound files in:",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = sfxAudioPlayer.getSfxDirectory().absolutePath,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = BrandPurple
-                                )
                             }
                         }
                     }

@@ -1,15 +1,21 @@
 package com.karlitodev.novelize.parser
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import com.karlitodev.novelize.model.Book
 import com.karlitodev.novelize.model.Chapter
 import com.karlitodev.novelize.model.DocumentFormat
 import com.karlitodev.novelize.model.Paragraph
 import com.karlitodev.novelize.model.Sentence
 import com.karlitodev.novelize.model.SpeakerRole
-import com.karlitodev.novelize.sfx.SfxCatalog
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.UUID
@@ -90,13 +96,11 @@ class DefaultNovelParser : NovelParser {
             // Split into individual sentences
             val rawSentences = trimmed.split(sentenceSplitPattern)
             val sentences = rawSentences.mapIndexed { idx, s ->
-                val sfx = SfxCatalog.findSfxCue(s)?.id
-                val ambient = SfxCatalog.findAmbientCue(s)?.id
                 Sentence(
                     sentenceIndex = idx,
                     text = s.trim(),
-                    sfxCue = sfx,
-                    ambientCue = ambient
+                    sfxCue = null,
+                    ambientCue = null
                 )
             }.filter { it.text.isNotEmpty() }
 
@@ -561,5 +565,93 @@ class DefaultNovelParser : NovelParser {
                text.endsWith("\"") ||
                text.endsWith("”") ||
                text.endsWith("»")
+    }
+
+    /**
+     * Extracts and persists the cover image for an imported book.
+     * Supports:
+     * - PDF: renders page 0 using native Android PdfRenderer
+     * - EPUB: extracts cover image from ZIP entries
+     * - DOCX: extracts embedded media image from word/media/
+     * Returns the absolute file path to the saved cover image, or null if none found.
+     */
+    fun extractCover(context: Context, uri: Uri, fileName: String, bookId: String): String? {
+        val lower = fileName.lowercase()
+        val coversDir = File(context.filesDir, "covers")
+        if (!coversDir.exists()) coversDir.mkdirs()
+        val targetFile = File(coversDir, "$bookId.jpg")
+
+        return try {
+            when {
+                lower.endsWith(".pdf") -> {
+                    context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                        val renderer = PdfRenderer(pfd)
+                        renderer.use { pdf ->
+                            if (pdf.pageCount > 0) {
+                                val page = pdf.openPage(0)
+                                val targetWidth = 480
+                                val targetHeight = (targetWidth * page.height / page.width.coerceAtLeast(1)).coerceIn(480, 800)
+                                val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+                                val canvas = Canvas(bitmap)
+                                canvas.drawColor(Color.WHITE)
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                page.close()
+
+                                FileOutputStream(targetFile).use { fos ->
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos)
+                                }
+                                bitmap.recycle()
+                                targetFile.absolutePath
+                            } else null
+                        }
+                    }
+                }
+                lower.endsWith(".epub") -> {
+                    var coverBytes: ByteArray? = null
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        val zis = ZipInputStream(stream)
+                        var entry = zis.nextEntry
+                        while (entry != null) {
+                            val name = entry.name.lowercase()
+                            if (name.contains("cover") && (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"))) {
+                                coverBytes = readEntryBytes(zis)
+                                zis.closeEntry()
+                                break
+                            }
+                            zis.closeEntry()
+                            entry = zis.nextEntry
+                        }
+                    }
+                    coverBytes?.let {
+                        targetFile.writeBytes(it)
+                        targetFile.absolutePath
+                    }
+                }
+                lower.endsWith(".docx") -> {
+                    var imageBytes: ByteArray? = null
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        val zis = ZipInputStream(stream)
+                        var entry = zis.nextEntry
+                        while (entry != null) {
+                            val name = entry.name.lowercase()
+                            if (name.startsWith("word/media/image1.") && (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"))) {
+                                imageBytes = readEntryBytes(zis)
+                                zis.closeEntry()
+                                break
+                            }
+                            zis.closeEntry()
+                            entry = zis.nextEntry
+                        }
+                    }
+                    imageBytes?.let {
+                        targetFile.writeBytes(it)
+                        targetFile.absolutePath
+                    }
+                }
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 }

@@ -52,8 +52,12 @@ jobs:
         run: |
           VERSION=$(grep versionName app/build.gradle.kts | grep -oP '"[^"]+"' | tr -d '"')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          mv app/build/outputs/apk/release/app-universal-release.apk \
-             app/build/outputs/apk/release/Novelize-${VERSION}-signed.apk
+          RELEASE_APK=$(find app/build/outputs/apk/release/ -type f -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          if [ -z "$RELEASE_APK" ]; then
+            RELEASE_APK=$(find app/build/outputs/apk/release/ -type f -name "*.apk" | head -n 1)
+          fi
+          echo "Found release APK: $RELEASE_APK"
+          cp "$RELEASE_APK" "app/build/outputs/apk/release/Novelize-${VERSION}-signed.apk"
 
       - name: Publish GitHub Release with direct APK
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v2.0' || startsWith(github.ref, 'refs/tags/v')
@@ -63,7 +67,7 @@ jobs:
           name: NoveLize v${{ steps.get_version.outputs.version }}
           files: app/build/outputs/apk/release/Novelize-*.apk
           generate_release_notes: false
-          body: "NoveLize v2.0 - Native Android architecture with lightweight TTS and ARM v7/v8 optimization."
+          body: "NoveLize v2.1 - Native Android architecture with 4 optimized TTS voice presets, custom book covers (PDF/EPUB/DOCX), favorite bookshelf, and smart independent reading position tracking."
           draft: false
           prerelease: false
         env:

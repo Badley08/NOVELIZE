@@ -10,10 +10,10 @@ android {
     defaultConfig {
         applicationId = "com.karlitodev.novelize"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         maxSdk = 37
-        versionCode = 20
-        versionName = "2.0"
+        versionCode = 21
+        versionName = "2.1"
 
         ndk {
             abiFilters.addAll(setOf("armeabi-v7a", "arm64-v8a"))

@@ -26,6 +26,9 @@ data class Book(
     val language: String = "en",
     val totalChapters: Int = 1,
     val readingProgressPercent: Float = 0f,
+    val isFavorite: Boolean = false,
+    val lastReadChapterIndex: Int = 1,
+    val lastReadParagraphIndex: Int = 0,
     val lastReadTimestamp: Long = System.currentTimeMillis()
 )
 

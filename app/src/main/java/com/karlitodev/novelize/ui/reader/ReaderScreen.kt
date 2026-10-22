@@ -17,10 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -28,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.karlitodev.novelize.audio.NarrationState
+import com.karlitodev.novelize.audio.VoicePreset
 import com.karlitodev.novelize.data.ReaderTheme
 import com.karlitodev.novelize.model.Chapter
 import com.karlitodev.novelize.model.Paragraph
@@ -37,11 +35,22 @@ import com.karlitodev.novelize.quiz.QuizEngine
 import com.karlitodev.novelize.theme.*
 import com.karlitodev.novelize.translation.DefaultTranslationService
 import com.karlitodev.novelize.translation.TranslationResult
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
+ * Data holder for word long-press actions remembering exact paragraph and sentence indices.
+ */
+private data class WordActionTarget(
+    val word: String,
+    val paragraphIndex: Int,
+    val sentenceIndex: Int
+)
+
+/**
  * Immersive reader screen with synchronized karaoke highlighting,
- * contextual sound design cues, multi-voice controls, and long-press actions.
+ * robust bookmarking ("where I stopped"), 4-voice native TTS controls,
+ * and automatic reading position tracking independent of TTS playback.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +59,7 @@ fun ReaderScreen(
     narrationState: NarrationState,
     theme: ReaderTheme,
     fontSizeSp: Float,
+    initialParagraphIndex: Int = 0,
     onBack: () -> Unit,
     onPlayPause: () -> Unit,
     onPreviousSentence: () -> Unit,
@@ -57,18 +67,24 @@ fun ReaderScreen(
     onSentenceClick: (Int, Int) -> Unit,
     onSpeedChange: (Float) -> Unit,
     onSleepTimerSelect: (Int) -> Unit,
+    onVoicePresetChange: (VoicePreset) -> Unit = {},
+    onReadingPositionChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    // State for contextual word action dialog
-    var selectedWordForAction by remember { mutableStateOf<String?>(null) }
+    // State for contextual word action dialog with exact position
+    var selectedTargetForAction by remember { mutableStateOf<WordActionTarget?>(null) }
     var translationDialogResult by remember { mutableStateOf<TranslationResult?>(null) }
     var isTranslating by remember { mutableStateOf(false) }
 
-    // State for manual stop marker (smart resume)
-    var manualStopPosition by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    // State for manual stop marker (smart resume) initialized to initial position
+    var manualStopPosition by remember {
+        mutableStateOf<Pair<Int, Int>?>(
+            if (initialParagraphIndex > 0) Pair(initialParagraphIndex, 0) else null
+        )
+    }
 
     // State for highlighted sentences/passages
     val userHighlights = remember { mutableStateListOf<Pair<Int, Int>>() }
@@ -78,9 +94,10 @@ fun ReaderScreen(
     var showQuizDialog by remember { mutableStateOf(false) }
     var quizQuestions by remember { mutableStateOf<List<QuizQuestion>>(emptyList()) }
 
-    // State for speed menu & sleep timer dialog
+    // State for speed menu, sleep timer dialog & voice selector dialog
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showSleepTimerMenu by remember { mutableStateOf(false) }
+    var showVoiceMenu by remember { mutableStateOf(false) }
 
     val translationService = remember { DefaultTranslationService() }
 
@@ -90,6 +107,24 @@ fun ReaderScreen(
         ReaderTheme.SEPIA -> Quad(SepiaBackground, SepiaOnBackground, SepiaKaraokeHighlight, SepiaSurface)
         ReaderTheme.NIGHT -> Quad(NightBackground, NightOnBackground, NightKaraokeHighlight, NightSurface)
         ReaderTheme.DYNAMIC -> Quad(Color(0xFF13111C), Color(0xFFEDE9FE), Color(0x556C5CE7), Color(0xFF1E1B2E))
+    }
+
+    // Restore saved reading position on screen launch
+    LaunchedEffect(chapter.id) {
+        if (initialParagraphIndex > 0 && initialParagraphIndex < chapter.paragraphs.size) {
+            listState.scrollToItem(initialParagraphIndex)
+        }
+    }
+
+    // Track user reading position while scrolling (Works independently of TTS)
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { pIndex ->
+                if (pIndex < chapter.paragraphs.size) {
+                    onReadingPositionChanged(pIndex)
+                }
+            }
     }
 
     // Auto-scroll to active sentence when narration advances
@@ -117,13 +152,6 @@ fun ReaderScreen(
                             color = textColor,
                             maxLines = 1
                         )
-                        narrationState.activeAmbientTitle?.let { ambient ->
-                            Text(
-                                text = "Ambient: $ambient",
-                                fontSize = 11.sp,
-                                color = BrandTeal
-                            )
-                        }
                     }
                 },
                 navigationIcon = {
@@ -139,15 +167,16 @@ fun ReaderScreen(
                     // "Back to where I stopped" quick jump button
                     IconButton(
                         onClick = {
+                            val targetIndex = manualStopPosition?.first ?: initialParagraphIndex
                             coroutineScope.launch {
-                                listState.animateScrollToItem(narrationState.currentParagraphIndex)
+                                listState.animateScrollToItem(targetIndex)
                             }
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.BookmarkBorder,
-                            contentDescription = "Back to where I stopped",
-                            tint = BrandPurpleLight
+                            imageVector = if (manualStopPosition != null) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Jump to bookmark",
+                            tint = BrandPurple
                         )
                     }
 
@@ -169,7 +198,7 @@ fun ReaderScreen(
             )
         },
         bottomBar = {
-            // Audio Drama player controls
+            // Native TTS audio drama player controls
             PlayerBar(
                 narrationState = narrationState,
                 surfaceColor = surfaceBarColor,
@@ -178,7 +207,8 @@ fun ReaderScreen(
                 onPrevious = onPreviousSentence,
                 onNext = onNextSentence,
                 onSpeedClick = { showSpeedMenu = true },
-                onTimerClick = { showSleepTimerMenu = true }
+                onTimerClick = { showSleepTimerMenu = true },
+                onVoiceClick = { showVoiceMenu = true }
             )
         }
     ) { innerPadding ->
@@ -203,11 +233,13 @@ fun ReaderScreen(
                         fontSizeSp = fontSizeSp,
                         textColor = textColor,
                         karaokeColor = karaokeHighlightColor,
-                        isMarkedStop = manualStopPosition == Pair(pIndex, 0),
-                        isUserHighlighted = userHighlights.contains(Pair(pIndex, 0)),
-                        isUserUnderlined = userUnderlines.contains(Pair(pIndex, 0)),
+                        isMarkedStop = manualStopPosition?.first == pIndex,
+                        isUserHighlighted = userHighlights.any { it.first == pIndex },
+                        isUserUnderlined = userUnderlines.any { it.first == pIndex },
                         onSentenceClick = { sIndex -> onSentenceClick(pIndex, sIndex) },
-                        onWordLongPress = { word -> selectedWordForAction = word }
+                        onWordLongPress = { word, sIndex ->
+                            selectedTargetForAction = WordActionTarget(word, pIndex, sIndex)
+                        }
                     )
                 }
 
@@ -218,9 +250,7 @@ fun ReaderScreen(
                             .fillMaxWidth()
                             .padding(top = 24.dp, bottom = 48.dp),
                         shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = surfaceBarColor
-                        )
+                        colors = CardDefaults.cardColors(containerColor = surfaceBarColor)
                     ) {
                         Column(
                             modifier = Modifier
@@ -242,7 +272,7 @@ fun ReaderScreen(
                                 color = textColor
                             )
                             Text(
-                                text = "Check your comprehension with a quick 3-question review.",
+                                text = "Check your comprehension with a quick review.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = textColor.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
@@ -262,36 +292,13 @@ fun ReaderScreen(
                 }
             }
 
-            // Floating SFX Notification Pill
-            narrationState.activeSfxTitle?.let { sfxTitle ->
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 16.dp),
-                    shape = RoundedCornerShape(30.dp),
-                    colors = CardDefaults.cardColors(containerColor = BrandCoral)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "SFX: $sfxTitle",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
             // Floating "Back to where I stopped" quick resume button
-            val isScrolledAway = listState.firstVisibleItemIndex != narrationState.currentParagraphIndex
-            if (isScrolledAway) {
+            val stopTarget = manualStopPosition?.first
+            if (stopTarget != null && listState.firstVisibleItemIndex != stopTarget) {
                 ExtendedFloatingActionButton(
                     onClick = {
                         coroutineScope.launch {
-                            listState.animateScrollToItem(narrationState.currentParagraphIndex)
+                            listState.animateScrollToItem(stopTarget)
                         }
                     },
                     containerColor = BrandPurple,
@@ -303,40 +310,41 @@ fun ReaderScreen(
                 ) {
                     Icon(Icons.Default.Bookmark, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Back to narration (¶${narrationState.currentParagraphIndex + 1})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Where I stopped (¶${stopTarget + 1})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 
     // Long-press Contextual Actions Bottom Sheet
-    selectedWordForAction?.let { word ->
+    selectedTargetForAction?.let { target ->
         AlertDialog(
-            onDismissRequest = { selectedWordForAction = null },
+            onDismissRequest = { selectedTargetForAction = null },
             title = {
-                Text(text = "“$word”", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(text = "“${target.word}”", fontWeight = FontWeight.Bold, fontSize = 18.sp)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         onClick = {
-                            manualStopPosition = Pair(narrationState.currentParagraphIndex, 0)
-                            selectedWordForAction = null
+                            manualStopPosition = Pair(target.paragraphIndex, target.sentenceIndex)
+                            onReadingPositionChanged(target.paragraphIndex)
+                            selectedTargetForAction = null
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.Bookmark, contentDescription = null, tint = BrandPurple)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text("Mark as where I stopped", color = textColor)
+                        Text("Mark as where I stopped (¶${target.paragraphIndex + 1})", color = textColor)
                     }
 
                     TextButton(
                         onClick = {
                             isTranslating = true
                             coroutineScope.launch {
-                                translationDialogResult = translationService.translate(word)
+                                translationDialogResult = translationService.translate(target.word)
                                 isTranslating = false
-                                selectedWordForAction = null
+                                selectedTargetForAction = null
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -348,85 +356,78 @@ fun ReaderScreen(
 
                     TextButton(
                         onClick = {
-                            val pos = Pair(narrationState.currentParagraphIndex, 0)
+                            val pos = Pair(target.paragraphIndex, target.sentenceIndex)
                             if (userHighlights.contains(pos)) userHighlights.remove(pos) else userHighlights.add(pos)
-                            selectedWordForAction = null
+                            selectedTargetForAction = null
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.BorderColor, contentDescription = null, tint = BrandAmber)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text("Highlight Color", color = textColor)
+                        Text("Highlight Passage", color = textColor)
                     }
 
                     TextButton(
                         onClick = {
-                            val pos = Pair(narrationState.currentParagraphIndex, 0)
+                            val pos = Pair(target.paragraphIndex, target.sentenceIndex)
                             if (userUnderlines.contains(pos)) userUnderlines.remove(pos) else userUnderlines.add(pos)
-                            selectedWordForAction = null
+                            selectedTargetForAction = null
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.FormatUnderlined, contentDescription = null, tint = BrandPurpleLight)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text("Underline", color = textColor)
+                        Text("Underline Text", color = textColor)
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { selectedWordForAction = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { selectedTargetForAction = null }) { Text("Dismiss") }
             }
         )
     }
 
-    // Offline Translation Result Dialog
+    // Translation Result Dialog
     translationDialogResult?.let { result ->
         AlertDialog(
             onDismissRequest = { translationDialogResult = null },
+            icon = { Icon(Icons.Default.Translate, contentDescription = null, tint = BrandTeal) },
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Translate, contentDescription = null, tint = BrandTeal)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Offline Translation", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
+                Text(text = "“${result.originalText}”", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        color = BrandTeal.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = result.translatedText,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp,
+                            color = BrandTeal,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                     Text(
-                        text = result.originalText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = result.translatedText,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BrandPurple
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Source: On-device Lexicon (${result.sourceLanguage.uppercase()} -> ${result.targetLanguage.uppercase()})",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Source: ${result.sourceLanguage.uppercase()} → Target: ${result.targetLanguage.uppercase()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.6f)
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = { translationDialogResult = null }) {
-                    Text("Done")
-                }
+                TextButton(onClick = { translationDialogResult = null }) { Text("OK") }
             }
         )
     }
 
-    // Speed Selector Dialog
+    // Playback Speed Selector Dialog
     if (showSpeedMenu) {
         AlertDialog(
             onDismissRequest = { showSpeedMenu = false },
-            title = { Text("Narration Speed") },
+            title = { Text("Playback Speed") },
             text = {
                 Column {
                     listOf(0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f).forEach { speed ->
@@ -437,7 +438,7 @@ fun ReaderScreen(
                                     onSpeedChange(speed)
                                     showSpeedMenu = false
                                 }
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
@@ -445,7 +446,8 @@ fun ReaderScreen(
                                 onClick = {
                                     onSpeedChange(speed)
                                     showSpeedMenu = false
-                                }
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = BrandPurple)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text("${speed}x", fontWeight = if (narrationState.playbackSpeed == speed) FontWeight.Bold else FontWeight.Normal)
@@ -455,6 +457,70 @@ fun ReaderScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSpeedMenu = false }) { Text("Close") }
+            }
+        )
+    }
+
+    // Voice Selector Dialog (The 4 Voices: Aria, Elena, Marcus, Julian)
+    if (showVoiceMenu) {
+        AlertDialog(
+            onDismissRequest = { showVoiceMenu = false },
+            title = { Text("Select TTS Voice", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    VoicePreset.entries.forEach { preset ->
+                        val isSelected = narrationState.selectedVoicePreset == preset
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onVoicePresetChange(preset)
+                                    showVoiceMenu = false
+                                },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) BrandPurple.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        onVoicePresetChange(preset)
+                                        showVoiceMenu = false
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = BrandPurple)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(preset.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (preset.gender == "F") "• Féminine" else "• Masculine",
+                                            fontSize = 11.sp,
+                                            color = if (preset.gender == "F") BrandPurple else BrandAmber,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                    Text(
+                                        text = preset.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showVoiceMenu = false }) { Text("Close") }
             }
         )
     }
@@ -514,7 +580,7 @@ private fun ParagraphView(
     isUserHighlighted: Boolean,
     isUserUnderlined: Boolean,
     onSentenceClick: (Int) -> Unit,
-    onWordLongPress: (String) -> Unit
+    onWordLongPress: (String, Int) -> Unit
 ) {
     val isDialogue = paragraph.speakerRole != SpeakerRole.NARRATOR
 
@@ -582,9 +648,10 @@ private fun ParagraphView(
                                         .clip(RoundedCornerShape(4.dp))
                                         .combinedClickable(
                                             onClick = { onSentenceClick(sIndex) },
-                                            onLongClick = { onWordLongPress(cleanWord) }
+                                            onLongClick = { onWordLongPress(cleanWord, sIndex) }
                                         )
                                         .padding(horizontal = 1.dp)
+                                DangerouslyLongOperationProtection
                                 )
                             }
                         }
@@ -604,7 +671,8 @@ private fun PlayerBar(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onSpeedClick: () -> Unit,
-    onTimerClick: () -> Unit
+    onTimerClick: () -> Unit,
+    onVoiceClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -623,22 +691,25 @@ private fun PlayerBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Speaker & AI Model badge
+                // Voice profile selector badge
                 Surface(
                     color = BrandPurple.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.clickable { onVoiceClick() }
                 ) {
-                    val label = narrationState.activeAiVoiceModelName?.let {
-                        "IA: $it"
-                    } ?: "Voix: ${narrationState.currentSpeaker.displayName}"
-
-                    Text(
-                        text = label,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BrandPurple,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.RecordVoiceOver, contentDescription = null, tint = BrandPurple, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Voix: ${narrationState.selectedVoicePreset.displayName}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandPurple
+                        )
+                    }
                 }
 
                 // Sleep timer countdown if active
@@ -650,16 +721,6 @@ private fun PlayerBar(
                         fontWeight = FontWeight.Bold
                     )
                 }
-            }
-
-            narrationState.unsupportedLanguageNotice?.let { notice ->
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "⚠️ $notice",
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -711,12 +772,12 @@ private fun PlayerBar(
                     )
                 }
 
-                // Sleep timer button
+                // Sleep timer
                 IconButton(onClick = onTimerClick) {
                     Icon(
                         imageVector = Icons.Default.Bedtime,
                         contentDescription = "Sleep Timer",
-                        tint = textColor
+                        tint = if (narrationState.sleepTimerRemainingSeconds != null) BrandAmber else textColor
                     )
                 }
             }
@@ -731,8 +792,8 @@ private fun QuizDialog(
 ) {
     var currentQuestionIndex by remember { mutableIntStateOf(0) }
     var selectedAnswerIndex by remember { mutableStateOf<Int?>(null) }
-    var score by remember { mutableIntStateOf(0) }
     var isSubmitted by remember { mutableStateOf(false) }
+    var score by remember { mutableIntStateOf(0) }
 
     val q = questions.getOrNull(currentQuestionIndex)
 

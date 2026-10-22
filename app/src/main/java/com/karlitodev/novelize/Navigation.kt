@@ -1,19 +1,19 @@
 package com.karlitodev.novelize
 
 import android.provider.OpenableColumns
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.karlitodev.novelize.audio.NarrationEngine
+import com.karlitodev.novelize.audio.VoicePreset
 import com.karlitodev.novelize.data.DefaultNovelizeRepository
 import com.karlitodev.novelize.data.NovelizeRepository
 import com.karlitodev.novelize.data.UserPreferences
 import com.karlitodev.novelize.model.Chapter
+import com.karlitodev.novelize.model.ReadingProgress
 import com.karlitodev.novelize.parser.DefaultNovelParser
 import com.karlitodev.novelize.sample.SampleNovels
 import com.karlitodev.novelize.ui.library.LibraryScreen
@@ -26,8 +26,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Root navigation graph for NoveLize.
- * Coordinates screens: Splash (physics + permissions), Wizard, Library, Reader, and Settings.
+ * Root navigation graph for NoveLize v2.1.
+ * Coordinates screens: Splash, Wizard (shown only once), Library, Reader, and Settings.
  */
 @Composable
 fun MainNavigation() {
@@ -56,7 +56,8 @@ fun MainNavigation() {
                 SplashScreen(
                     onSplashComplete = {
                         backStack.clear()
-                        if (preferences.isWizardCompleted) {
+                        // Ensure wizard runs only once in app lifetime
+                        if (repository.isWizardCompleted()) {
                             backStack.add(LibraryNavKey)
                         } else {
                             backStack.add(WizardNavKey)
@@ -90,6 +91,16 @@ fun MainNavigation() {
                     onBookClick = { book ->
                         backStack.add(ReaderNavKey(book.id))
                     },
+                    onToggleFavorite = { bookId ->
+                        coroutineScope.launch {
+                            repository.toggleFavorite(bookId)
+                        }
+                    },
+                    onDeleteBook = { bookId ->
+                        coroutineScope.launch {
+                            repository.deleteBook(bookId)
+                        }
+                    },
                     onImportUri = { uri ->
                         coroutineScope.launch {
                             withContext(Dispatchers.IO) {
@@ -105,7 +116,9 @@ fun MainNavigation() {
                                     context.contentResolver.openInputStream(uri)?.use { stream ->
                                         val parser = DefaultNovelParser()
                                         val (importedBook, chapters) = parser.parseStream(stream, fileName)
-                                        repository.addBook(importedBook, chapters)
+                                        val coverPath = parser.extractCover(context, uri, fileName, importedBook.id)
+                                        val finalBook = importedBook.copy(coverPath = coverPath ?: importedBook.coverPath)
+                                        repository.addBook(finalBook, chapters)
                                     }
                                 } catch (_: Exception) {}
                             }
@@ -130,6 +143,7 @@ fun MainNavigation() {
 
             entry<ReaderNavKey> { key ->
                 var currentChapter by remember { mutableStateOf<Chapter?>(null) }
+                var initialParagraphIndex by remember { mutableIntStateOf(0) }
 
                 LaunchedEffect(key.bookId) {
                     val book = books.firstOrNull { it.id == key.bookId }
@@ -137,8 +151,10 @@ fun MainNavigation() {
                     val firstChapter = chapters.firstOrNull() ?: SampleNovels.getDemoChapters().first()
                     currentChapter = firstChapter
                     val progress = repository.getReadingProgress(key.bookId)
-                    narrationEngine.setSfxVolume(if (preferences.sfxEnabled) preferences.sfxVolume else 0f)
-                    narrationEngine.setAmbientVolume(if (preferences.sfxEnabled) preferences.ambientVolume else 0f)
+                    initialParagraphIndex = progress.paragraphIndex
+
+                    val voicePreset = VoicePreset.fromId(preferences.selectedVoicePack)
+                    narrationEngine.setVoicePreset(voicePreset)
                     narrationEngine.setChapter(firstChapter, progress, book?.language ?: "en")
                 }
 
@@ -150,7 +166,7 @@ fun MainNavigation() {
                         val percent = (passedSentences.toFloat() / totalSentences).coerceIn(0f, 1f)
 
                         repository.saveReadingProgress(
-                            com.karlitodev.novelize.model.ReadingProgress(
+                            ReadingProgress(
                                 bookId = key.bookId,
                                 chapterIndex = narrationState.currentChapterIndex,
                                 paragraphIndex = narrationState.currentParagraphIndex,
@@ -169,6 +185,7 @@ fun MainNavigation() {
                         narrationState = narrationState,
                         theme = preferences.theme,
                         fontSizeSp = preferences.fontSizeSp,
+                        initialParagraphIndex = initialParagraphIndex,
                         onBack = {
                             narrationEngine.pause()
                             backStack.removeLastOrNull()
@@ -184,6 +201,30 @@ fun MainNavigation() {
                         },
                         onSleepTimerSelect = { minutes ->
                             narrationEngine.startSleepTimer(minutes)
+                        },
+                        onVoicePresetChange = { preset ->
+                            narrationEngine.setVoicePreset(preset)
+                            coroutineScope.launch {
+                                repository.updatePreferences(preferences.copy(selectedVoicePack = preset.id))
+                            }
+                        },
+                        onReadingPositionChanged = { pIndex ->
+                            val totalSentences = chapter.paragraphs.sumOf { it.sentences.size }.coerceAtLeast(1)
+                            val passedSentences = chapter.paragraphs.take(pIndex).sumOf { it.sentences.size }
+                            val percent = (passedSentences.toFloat() / totalSentences).coerceIn(0f, 1f)
+
+                            coroutineScope.launch {
+                                repository.saveReadingProgress(
+                                    ReadingProgress(
+                                        bookId = key.bookId,
+                                        chapterIndex = chapter.chapterIndex,
+                                        paragraphIndex = pIndex,
+                                        sentenceIndex = 0,
+                                        wordIndex = 0,
+                                        progressPercentage = percent
+                                    )
+                                )
+                            }
                         }
                     )
                 }
@@ -195,19 +236,10 @@ fun MainNavigation() {
                     onPreferencesChange = { updated ->
                         coroutineScope.launch {
                             repository.updatePreferences(updated)
+                            narrationEngine.setVoicePreset(VoicePreset.fromId(updated.selectedVoicePack))
                         }
                     },
                     onBack = { backStack.removeLastOrNull() }
-                )
-            }
-
-            entry<Main> {
-                LibraryScreen(
-                    books = books,
-                    onBookClick = { book -> backStack.add(ReaderNavKey(book.id)) },
-                    onImportUri = {},
-                    onImportDemoClick = {},
-                    onSettingsClick = { backStack.add(SettingsNavKey) }
                 )
             }
         }

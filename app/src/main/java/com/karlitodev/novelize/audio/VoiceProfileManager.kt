@@ -11,7 +11,32 @@ import com.karlitodev.novelize.model.SpeakerRole
 import java.util.Locale
 
 /**
- * Manages multi-voice speaker assignments, language detection, and audio focus.
+ * The 4 optimized TTS voice presets:
+ * 2 Female voices + 2 Male voices.
+ */
+enum class VoicePreset(
+    val id: String,
+    val displayName: String,
+    val gender: String, // "F" or "M"
+    val basePitch: Float,
+    val rateModifier: Float,
+    val description: String
+) {
+    FEMALE_1("female_1", "Aria", "F", 1.15f, 1.0f, "Voix féminine douce et mélodieuse"),
+    FEMALE_2("female_2", "Elena", "F", 1.32f, 1.04f, "Voix féminine vive et expressive"),
+    MALE_1("male_1", "Marcus", "M", 0.84f, 0.98f, "Voix masculine calme et posée"),
+    MALE_2("male_2", "Julian", "M", 0.70f, 0.94f, "Voix masculine grave et profonde");
+
+    companion object {
+        fun fromId(id: String): VoicePreset {
+            return entries.firstOrNull { it.id == id } ?: FEMALE_1
+        }
+    }
+}
+
+/**
+ * Manages native Android TextToSpeech configuration, audio focus,
+ * and the 4 dedicated voice profiles.
  */
 class VoiceProfileManager(
     private val context: Context
@@ -36,70 +61,68 @@ class VoiceProfileManager(
     }
 
     /**
-     * Configures the TTS engine for the specified speaker role and language.
+     * Configures the TTS engine for the specified voice preset and speed.
      */
-    fun applySpeakerProfile(
+    fun applyVoicePreset(
         tts: TextToSpeech?,
-        role: SpeakerRole,
+        preset: VoicePreset,
         languageCode: String,
         baseSpeed: Float
     ) {
         if (tts == null) return
-
         val locale = resolveLocale(languageCode)
         try {
             tts.language = locale
         } catch (_: Exception) {}
 
-        // Try to match distinct system voices for roles if available
-        val matchedVoice = findMatchingVoice(tts, role, locale)
+        // Match system voice matching gender if installed
+        val matchedVoice = findMatchingVoiceByGender(tts, preset.gender, locale)
         if (matchedVoice != null) {
             try {
                 tts.voice = matchedVoice
             } catch (_: Exception) {}
         }
 
-        // Apply role-specific pitch and speech rate modulation
-        when (role) {
-            SpeakerRole.NARRATOR -> {
-                tts.setPitch(1.0f)
-                tts.setSpeechRate(baseSpeed)
-            }
-            SpeakerRole.HERO -> {
-                tts.setPitch(0.92f)
-                tts.setSpeechRate(baseSpeed * 1.05f)
-            }
-            SpeakerRole.FEMALE_1 -> {
-                tts.setPitch(1.30f)
-                tts.setSpeechRate(baseSpeed * 1.0f)
-            }
-            SpeakerRole.MALE_1 -> {
-                tts.setPitch(0.78f)
-                tts.setSpeechRate(baseSpeed * 0.95f)
-            }
-            SpeakerRole.SUPPORTING -> {
-                tts.setPitch(1.15f)
-                tts.setSpeechRate(baseSpeed * 1.02f)
-            }
-        }
+        // Apply profile-specific pitch and speech rate modulation
+        tts.setPitch(preset.basePitch)
+        tts.setSpeechRate(baseSpeed * preset.rateModifier)
     }
 
     /**
-     * Searches installed system voices matching role gender and locale.
+     * Maps speaker roles in novel dialogues to the 4 voice presets.
      */
-    private fun findMatchingVoice(tts: TextToSpeech, role: SpeakerRole, locale: Locale): Voice? {
+    fun applySpeakerProfile(
+        tts: TextToSpeech?,
+        role: SpeakerRole,
+        languageCode: String,
+        baseSpeed: Float,
+        primaryPreset: VoicePreset = VoicePreset.FEMALE_1
+    ) {
+        val preset = when (role) {
+            SpeakerRole.NARRATOR -> primaryPreset
+            SpeakerRole.HERO -> if (primaryPreset.gender == "M") VoicePreset.MALE_1 else VoicePreset.FEMALE_1
+            SpeakerRole.FEMALE_1 -> VoicePreset.FEMALE_2
+            SpeakerRole.MALE_1 -> VoicePreset.MALE_2
+            SpeakerRole.SUPPORTING -> if (primaryPreset.gender == "F") VoicePreset.MALE_1 else VoicePreset.FEMALE_2
+        }
+        applyVoicePreset(tts, preset, languageCode, baseSpeed)
+    }
+
+    /**
+     * Searches installed system voices matching gender and locale.
+     */
+    private fun findMatchingVoiceByGender(tts: TextToSpeech, gender: String, locale: Locale): Voice? {
         val availableVoices = try { tts.voices } catch (_: Exception) { null } ?: return null
         val localeVoices = availableVoices.filter { it.locale.language == locale.language }
         if (localeVoices.isEmpty()) return null
 
-        return when (role) {
-            SpeakerRole.FEMALE_1 -> {
-                localeVoices.firstOrNull { it.name.contains("female", ignoreCase = true) || it.name.contains("femme", ignoreCase = true) }
-            }
-            SpeakerRole.MALE_1, SpeakerRole.HERO -> {
-                localeVoices.firstOrNull { it.name.contains("male", ignoreCase = true) || it.name.contains("homme", ignoreCase = true) }
-            }
-            else -> localeVoices.firstOrNull()
+        val isFemale = gender == "F"
+        return if (isFemale) {
+            localeVoices.firstOrNull { it.name.contains("female", ignoreCase = true) || it.name.contains("femme", ignoreCase = true) }
+                ?: localeVoices.firstOrNull()
+        } else {
+            localeVoices.firstOrNull { it.name.contains("male", ignoreCase = true) || it.name.contains("homme", ignoreCase = true) }
+                ?: localeVoices.lastOrNull()
         }
     }
 
