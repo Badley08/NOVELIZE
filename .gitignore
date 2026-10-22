@@ -15,3 +15,8 @@ build/
 *.jks
 scratch/
 .kotlin/
+*.txt
+*.png
+screenshots/
+logs/
+crash/

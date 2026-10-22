@@ -168,19 +168,66 @@ class DefaultNovelParser : NovelParser {
             val zis = ZipInputStream(inputStream)
             var entry = zis.nextEntry
             while (entry != null) {
-                if (entry.name == "word/document.xml") {
-                    val xml = readEntryText(zis)
-                    val pMatcher = Pattern.compile("<w:p[ >](.*?)</w:p>", Pattern.DOTALL).matcher(xml)
-                    while (pMatcher.find()) {
-                        val pXml = pMatcher.group(1) ?: ""
-                        val tMatcher = Pattern.compile("<w:t[^>]*>(.*?)</w:t>").matcher(pXml)
-                        val sb = StringBuilder()
-                        while (tMatcher.find()) {
-                            sb.append(tMatcher.group(1))
+                if (entry.name.equals("word/document.xml", ignoreCase = true)) {
+                    val xmlBytes = readEntryBytes(zis)
+                    val pBuilder = StringBuilder()
+                    var inParagraph = false
+                    var inText = false
+
+                    try {
+                        val parser = android.util.Xml.newPullParser()
+                        parser.setInput(xmlBytes.inputStream(), "UTF-8")
+                        var eventType = parser.eventType
+                        while (eventType != org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {
+                            val name = parser.name ?: ""
+                            when (eventType) {
+                                org.xmlpull.v1.XmlPullParser.START_TAG -> {
+                                    if (name.equals("p", ignoreCase = true) || name.endsWith(":p", ignoreCase = true)) {
+                                        inParagraph = true
+                                        pBuilder.clear()
+                                    } else if (name.equals("t", ignoreCase = true) || name.endsWith(":t", ignoreCase = true)) {
+                                        inText = true
+                                    } else if (name.equals("br", ignoreCase = true) || name.endsWith(":br", ignoreCase = true) ||
+                                               name.equals("cr", ignoreCase = true) || name.endsWith(":cr", ignoreCase = true)) {
+                                        if (inParagraph) pBuilder.append("\n")
+                                    } else if (name.equals("tab", ignoreCase = true) || name.endsWith(":tab", ignoreCase = true)) {
+                                        if (inParagraph) pBuilder.append("    ")
+                                    }
+                                }
+                                org.xmlpull.v1.XmlPullParser.TEXT -> {
+                                    if (inParagraph && inText) {
+                                        pBuilder.append(parser.text)
+                                    }
+                                }
+                                org.xmlpull.v1.XmlPullParser.END_TAG -> {
+                                    if (name.equals("t", ignoreCase = true) || name.endsWith(":t", ignoreCase = true)) {
+                                        inText = false
+                                    } else if (name.equals("p", ignoreCase = true) || name.endsWith(":p", ignoreCase = true)) {
+                                        inParagraph = false
+                                        val pText = pBuilder.toString().trim()
+                                        if (pText.isNotEmpty()) {
+                                            paragraphs.add(pText)
+                                        }
+                                    }
+                                }
+                            }
+                            eventType = parser.next()
                         }
-                        val text = sb.toString().trim()
-                        if (text.isNotEmpty()) {
-                            paragraphs.add(text)
+                    } catch (_: Exception) {
+                        // Fallback simple regex extraction if pull parser fails
+                        val xml = String(xmlBytes, Charsets.UTF_8)
+                        val pMatcher = Pattern.compile("<w:p[ >](.*?)</w:p>", Pattern.DOTALL).matcher(xml)
+                        while (pMatcher.find()) {
+                            val pXml = pMatcher.group(1) ?: ""
+                            val tMatcher = Pattern.compile("<w:t[^>]*>(.*?)</w:t>").matcher(pXml)
+                            val sb = StringBuilder()
+                            while (tMatcher.find()) {
+                                sb.append(tMatcher.group(1))
+                            }
+                            val text = sb.toString().trim()
+                            if (text.isNotEmpty()) {
+                                paragraphs.add(text)
+                            }
                         }
                     }
                 }
@@ -212,18 +259,12 @@ class DefaultNovelParser : NovelParser {
 
         try {
             val bytes = inputStream.readBytes()
-            val raw = String(bytes, Charsets.ISO_8859_1)
-            val textObjectMatcher = Pattern.compile("BT\\s+(.*?)\\s+ET", Pattern.DOTALL).matcher(raw)
-            while (textObjectMatcher.find()) {
-                val block = textObjectMatcher.group(1) ?: ""
-                val stringMatcher = Pattern.compile("\\(([^)]*)\\)\\s*(?:Tj|')").matcher(block)
-                while (stringMatcher.find()) {
-                    val s = stringMatcher.group(1)
-                    if (s != null && s.isNotEmpty()) {
-                        sb.append(s).append(" ")
-                    }
+            val textBlocks = extractPdfStreams(bytes)
+            for (block in textBlocks) {
+                val extracted = extractTextFromPdfStream(block)
+                if (extracted.isNotBlank()) {
+                    sb.append(extracted).append("\n\n")
                 }
-                sb.append("\n")
             }
         } catch (_: Exception) {}
 
@@ -244,10 +285,99 @@ class DefaultNovelParser : NovelParser {
         return Pair(book, chapters)
     }
 
+    private fun extractPdfStreams(pdfBytes: ByteArray): List<String> {
+        val streams = mutableListOf<String>()
+        val raw = String(pdfBytes, Charsets.ISO_8859_1)
+
+        val streamPattern = Pattern.compile("stream[\r\n]+([\\s\\S]*?)[\r\n]+endstream")
+        val matcher = streamPattern.matcher(raw)
+
+        while (matcher.find()) {
+            val startIdx = matcher.start(1)
+            val endIdx = matcher.end(1)
+            val headerIdx = raw.lastIndexOf("<<", startIdx)
+            val isFlate = if (headerIdx != -1 && headerIdx < startIdx) {
+                raw.substring(headerIdx, startIdx).contains("FlateDecode")
+            } else false
+
+            val streamBytes = pdfBytes.copyOfRange(startIdx, endIdx)
+
+            if (isFlate) {
+                try {
+                    val inflater = java.util.zip.Inflater()
+                    inflater.setInput(streamBytes)
+                    val buffer = ByteArray(4096)
+                    val baos = ByteArrayOutputStream()
+                    while (!inflater.finished()) {
+                        val count = inflater.inflate(buffer)
+                        if (count <= 0) break
+                        baos.write(buffer, 0, count)
+                    }
+                    inflater.end()
+                    streams.add(baos.toString("ISO-8859-1"))
+                } catch (_: Exception) {
+                    streams.add(String(streamBytes, Charsets.ISO_8859_1))
+                }
+            } else {
+                streams.add(String(streamBytes, Charsets.ISO_8859_1))
+            }
+        }
+
+        // If no streams found, fallback to scanning entire raw content
+        if (streams.isEmpty()) {
+            streams.add(raw)
+        }
+
+        return streams
+    }
+
+    private fun extractTextFromPdfStream(streamContent: String): String {
+        val sb = StringBuilder()
+        val btEtPattern = Pattern.compile("BT\\s+([\\s\\S]*?)\\s+ET")
+        val btMatcher = btEtPattern.matcher(streamContent)
+
+        while (btMatcher.find()) {
+            val textBlock = btMatcher.group(1) ?: continue
+
+            // 1. Tj operators: (string) Tj
+            val tjMatcher = Pattern.compile("\\((.*?)\\)\\s*(?:Tj|'|\")").matcher(textBlock)
+            while (tjMatcher.find()) {
+                val str = decodePdfString(tjMatcher.group(1) ?: "")
+                if (str.isNotBlank()) sb.append(str).append(" ")
+            }
+
+            // 2. TJ array operators: [(s1) -10 (s2)] TJ
+            val arrayTjMatcher = Pattern.compile("\\[([^\\]]*)\\]\\s*TJ").matcher(textBlock)
+            while (arrayTjMatcher.find()) {
+                val arrayContent = arrayTjMatcher.group(1) ?: ""
+                val itemMatcher = Pattern.compile("\\((.*?)\\)").matcher(arrayContent)
+                while (itemMatcher.find()) {
+                    val item = decodePdfString(itemMatcher.group(1) ?: "")
+                    if (item.isNotBlank()) sb.append(item)
+                }
+                sb.append(" ")
+            }
+            sb.append("\n")
+        }
+
+        return sb.toString().trim()
+    }
+
+    private fun decodePdfString(input: String): String {
+        return input
+            .replace("\\(", "(")
+            .replace("\\)", ")")
+            .replace("\\\\", "\\")
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+    }
+
     private fun parseEpubStream(inputStream: InputStream, fileName: String, bookId: String): Pair<Book, List<Chapter>> {
         var bookTitle = fileName.substringBeforeLast(".").replace("_", " ")
         var bookAuthor = "Unknown Author"
-        val xhtmlFiles = mutableMapOf<String, String>()
+        val zipFiles = mutableMapOf<String, ByteArray>()
+        var opfPath = ""
 
         try {
             val zis = ZipInputStream(inputStream)
@@ -255,21 +385,16 @@ class DefaultNovelParser : NovelParser {
 
             while (entry != null) {
                 val name = entry.name
-                if (name.endsWith(".xhtml", ignoreCase = true) ||
-                    name.endsWith(".html", ignoreCase = true) ||
-                    name.endsWith(".htm", ignoreCase = true)
-                ) {
-                    val content = readEntryText(zis)
-                    xhtmlFiles[name] = content
-                } else if (name.endsWith(".opf", ignoreCase = true)) {
-                    val opfContent = readEntryText(zis)
-                    val titleMatch = Regex("<dc:title[^>]*>([^<]+)</dc:title>", RegexOption.IGNORE_CASE).find(opfContent)
-                    if (titleMatch != null) {
-                        bookTitle = titleMatch.groupValues[1].trim()
-                    }
-                    val authorMatch = Regex("<dc:creator[^>]*>([^<]+)</dc:creator>", RegexOption.IGNORE_CASE).find(opfContent)
-                    if (authorMatch != null) {
-                        bookAuthor = authorMatch.groupValues[1].trim()
+                val bytes = readEntryBytes(zis)
+                zipFiles[name] = bytes
+
+                if (name.endsWith(".opf", ignoreCase = true)) {
+                    opfPath = name
+                } else if (name.equals("META-INF/container.xml", ignoreCase = true)) {
+                    val containerXml = String(bytes, Charsets.UTF_8)
+                    val rootMatch = Regex("full-path=\"([^\"]+)\"", RegexOption.IGNORE_CASE).find(containerXml)
+                    if (rootMatch != null) {
+                        opfPath = rootMatch.groupValues[1]
                     }
                 }
                 zis.closeEntry()
@@ -277,12 +402,67 @@ class DefaultNovelParser : NovelParser {
             }
         } catch (_: Exception) {}
 
+        // Read OPF metadata and spine
+        val spineHrefs = mutableListOf<String>()
+        if (opfPath.isNotEmpty() && zipFiles.containsKey(opfPath)) {
+            val opfContent = String(zipFiles[opfPath] ?: ByteArray(0), Charsets.UTF_8)
+            val titleMatch = Regex("<dc:title[^>]*>([^<]+)</dc:title>", RegexOption.IGNORE_CASE).find(opfContent)
+            if (titleMatch != null) {
+                bookTitle = titleMatch.groupValues[1].trim()
+            }
+            val authorMatch = Regex("<dc:creator[^>]*>([^<]+)</dc:creator>", RegexOption.IGNORE_CASE).find(opfContent)
+            if (authorMatch != null) {
+                bookAuthor = authorMatch.groupValues[1].trim()
+            }
+
+            // Manifest id -> href
+            val idToHref = mutableMapOf<String, String>()
+            val itemMatcher = Pattern.compile("<item[^>]+id=\"([^\"]+)\"[^>]+href=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE).matcher(opfContent)
+            while (itemMatcher.find()) {
+                val id = itemMatcher.group(1) ?: ""
+                val href = itemMatcher.group(2) ?: ""
+                idToHref[id] = href
+            }
+
+            // Spine reading order
+            val opfDir = if (opfPath.contains("/")) opfPath.substringBeforeLast("/") + "/" else ""
+            val spineMatcher = Pattern.compile("<itemref[^>]+idref=\"([^\"]+)\"", Pattern.CASE_INSENSITIVE).matcher(opfContent)
+            while (spineMatcher.find()) {
+                val idref = spineMatcher.group(1) ?: ""
+                val href = idToHref[idref]
+                if (href != null) {
+                    val fullPath = opfDir + href
+                    spineHrefs.add(fullPath)
+                }
+            }
+        }
+
+        // Ordered list of HTML files to process
+        val orderedHtmlFiles = mutableListOf<String>()
+        for (href in spineHrefs) {
+            val match = zipFiles.keys.firstOrNull { it.equals(href, ignoreCase = true) || it.endsWith(href, ignoreCase = true) }
+            if (match != null && !orderedHtmlFiles.contains(match)) {
+                orderedHtmlFiles.add(match)
+            }
+        }
+
+        // Fallback to alphabetical sorting if no spine was resolved
+        if (orderedHtmlFiles.isEmpty()) {
+            orderedHtmlFiles.addAll(
+                zipFiles.keys.filter {
+                    it.endsWith(".xhtml", ignoreCase = true) ||
+                    it.endsWith(".html", ignoreCase = true) ||
+                    it.endsWith(".htm", ignoreCase = true)
+                }.sorted()
+            )
+        }
+
         val chapters = mutableListOf<Chapter>()
         var chapterIndex = 1
 
-        val sortedEntries = xhtmlFiles.entries.sortedBy { it.key }
-
-        for ((_, htmlContent) in sortedEntries) {
+        for (path in orderedHtmlFiles) {
+            val bytes = zipFiles[path] ?: continue
+            val htmlContent = String(bytes, Charsets.UTF_8)
             val cleanTitle = extractHtmlTitle(htmlContent) ?: "Chapter $chapterIndex"
             val textContent = stripHtmlTags(htmlContent)
 
@@ -326,14 +506,14 @@ class DefaultNovelParser : NovelParser {
         return Pair(book, chapters)
     }
 
-    private fun readEntryText(zis: ZipInputStream): String {
+    private fun readEntryBytes(zis: ZipInputStream): ByteArray {
         val buffer = ByteArray(4096)
         val baos = ByteArrayOutputStream()
         var read: Int
         while (zis.read(buffer).also { read = it } != -1) {
             baos.write(buffer, 0, read)
         }
-        return baos.toString("UTF-8")
+        return baos.toByteArray()
     }
 
     private fun extractHtmlTitle(html: String): String? {
@@ -347,19 +527,29 @@ class DefaultNovelParser : NovelParser {
     }
 
     private fun stripHtmlTags(html: String): String {
-        return html
-            .replace(Regex("<style[^>]*>[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("<script[^>]*>[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
-            .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
-            .replace(Regex("<[^>]*>"), "")
-            .replace("&nbsp;", " ")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&#39;", "'")
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                android.text.Html.fromHtml(html, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
+            } else {
+                @Suppress("DEPRECATION")
+                android.text.Html.fromHtml(html).toString().trim()
+            }
+        } catch (_: Exception) {
+            html
+                .replace(Regex("<style[^>]*>[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), "")
+                .replace(Regex("<script[^>]*>[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), "")
+                .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
+                .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
+                .replace(Regex("<[^>]*>"), "")
+                .replace("&nbsp;", " ")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&#39;", "'")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .trim()
+        }
     }
 
     private fun isDialogueParagraph(text: String): Boolean {

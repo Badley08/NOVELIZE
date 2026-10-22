@@ -9,14 +9,50 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "com.karlitodev.novelize"
-        minSdk = 29
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        minSdk = 26
+        targetSdk = 35
+        maxSdk = 37
+        versionCode = 20
+        versionName = "2.0"
+
+        ndk {
+            abiFilters.addAll(setOf("armeabi-v7a", "arm64-v8a"))
+        }
+    }
+
+    // Target ARM architectures exclusively (ARM v7 and ARM v8 / arm64)
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = true
+        }
+    }
+
+    // Signing credentials from environment variables for CI/CD
+    val envKeystorePath = System.getenv("KEYSTORE_PATH")
+    val envStorePass    = System.getenv("KEYSTORE_STORE_PASS")
+    val envKeyAlias     = System.getenv("KEYSTORE_KEY_ALIAS")
+    val envKeyPass      = System.getenv("KEYSTORE_KEY_PASS")
+
+    signingConfigs {
+        if (envKeystorePath != null && envStorePass != null && envKeyAlias != null && envKeyPass != null) {
+            create("release") {
+                storeFile     = file(envKeystorePath)
+                storePassword = envStorePass
+                keyAlias      = envKeyAlias
+                keyPassword   = envKeyPass
+            }
+        }
     }
 
     buildTypes {
         release {
+            val releaseSigningConfig = signingConfigs.findByName("release")
+            if (releaseSigningConfig != null) {
+                signingConfig = releaseSigningConfig
+            }
             // Enable R8 code shrinking and obfuscation
             isMinifyEnabled = true
             // Enable resource shrinking to remove unused assets and resources
@@ -29,7 +65,6 @@ android {
             )
         }
         debug {
-            // Disable debuggable mode per project configuration
             isDebuggable = false
         }
     }
