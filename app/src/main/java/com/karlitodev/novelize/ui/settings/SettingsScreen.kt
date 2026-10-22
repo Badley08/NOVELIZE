@@ -374,7 +374,7 @@ fun SettingsScreen(
                                         Text(preset.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Surface(
-                                            color = if (preset.gender == "F") BrandPurpleLight.copy(alpha = 0.2f) else BrandAmber.copy(alpha = 0.2f),
+                                            color = if (preset.gender == "F") BrandPurple.copy(alpha = 0.2f) else BrandAmber.copy(alpha = 0.2f),
                                             shape = RoundedCornerShape(6.dp)
                                         ) {
                                             Text(

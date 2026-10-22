@@ -156,7 +156,7 @@ class NarrationEngine(
         updateNotification(false)
     }
 
-    override fun previous() {
+    fun previous() {
         val chapter = activeChapter ?: return
         var pIdx = _state.value.currentParagraphIndex
         var sIdx = _state.value.currentSentenceIndex
@@ -180,7 +180,7 @@ class NarrationEngine(
         }
     }
 
-    override fun next() {
+    fun next() {
         val chapter = activeChapter ?: return
         var pIdx = _state.value.currentParagraphIndex
         var sIdx = _state.value.currentSentenceIndex
