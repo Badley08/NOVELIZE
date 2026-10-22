@@ -40,10 +40,18 @@ object CrashHandler {
     }
 
     /**
-     * Returns the File reference to crash.txt.
+     * Returns the File reference to crash.txt in Android/data/com.karlitodev.novelize/logs/
+     * with fallback to internal storage.
      */
     fun getCrashFile(context: Context): File {
-        return File(context.filesDir, CRASH_FILE_NAME)
+        return try {
+            val baseExt = context.getExternalFilesDir(null)?.parentFile
+                ?: File("/storage/emulated/0/Android/data/${context.packageName}")
+            val logsDir = File(baseExt, "logs").apply { mkdirs() }
+            File(logsDir, CRASH_FILE_NAME)
+        } catch (_: Exception) {
+            File(context.filesDir, CRASH_FILE_NAME)
+        }
     }
 
     /**
@@ -115,8 +123,14 @@ object CrashHandler {
             appendLine("=== END OF REPORT ===")
         }
 
-        val file = getCrashFile(context)
-        file.writeText(report)
+        try {
+            val file = getCrashFile(context)
+            file.writeText(report)
+            // Also write to crah.txt if requested
+            File(file.parentFile, "crah.txt").writeText(report)
+            // Backup copy in internal files
+            File(context.filesDir, CRASH_FILE_NAME).writeText(report)
+        } catch (_: Exception) {}
     }
 
     /**

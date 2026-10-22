@@ -38,15 +38,6 @@ fun MainNavigation() {
     val preferences by repository.preferences.collectAsStateWithLifecycle(initialValue = UserPreferences())
     val books by repository.books.collectAsStateWithLifecycle(initialValue = emptyList())
 
-    val narrationEngine = remember { NarrationEngine(context, coroutineScope) }
-    val narrationState by narrationEngine.state.collectAsStateWithLifecycle()
-
-    DisposableEffect(Unit) {
-        onDispose {
-            narrationEngine.release()
-        }
-    }
-
     val backStack = rememberNavBackStack(SplashNavKey)
 
     NavDisplay(
@@ -156,6 +147,15 @@ fun MainNavigation() {
             }
 
             entry<ReaderNavKey> { key ->
+                val narrationEngine = remember(key.bookId) { NarrationEngine(context, coroutineScope) }
+                val narrationState by narrationEngine.state.collectAsStateWithLifecycle()
+
+                DisposableEffect(key.bookId) {
+                    onDispose {
+                        narrationEngine.release()
+                    }
+                }
+
                 var currentChapter by remember { mutableStateOf<Chapter?>(null) }
 
                 LaunchedEffect(key.bookId) {

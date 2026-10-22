@@ -38,6 +38,22 @@ private data class ReleaseBlock(
 private val CHANGELOG: List<ReleaseBlock> = listOf(
 
     ReleaseBlock(
+        version = "1.5",
+        date = "2026-10-21",
+        sections = listOf(
+            ChangeSection(
+                title = "Optimizations and Stability",
+                entries = listOf(
+                    ChangeEntry("On-demand AI voice and audio drama initialization: neural models, SoundPool, and AudioTrack are loaded strictly when opening the Reader, preventing launch memory pressure."),
+                    ChangeEntry("Enhanced CrashHandler: diagnostics are immediately saved to Android/data/com.karlitodev.novelize/logs/crash.txt and crah.txt."),
+                    ChangeEntry("Code shrinking and R8 obfuscation protection with NavKey serialization keep rules."),
+                    ChangeEntry("Configured maxSdk to 37 and streamlined startup activity lifecycle.")
+                )
+            )
+        )
+    ),
+
+    ReleaseBlock(
         version = "1.4",
         date = "2026-10-21",
         sections = listOf(

@@ -1,58 +1,66 @@
-# Journal des Modifications - NoveLize
+# Changelog - NoveLize
 
-Toutes les modifications notables de ce projet sont documentees dans ce fichier.
-Ce journal ne contient aucun emoji conformement aux exigences de versionnage.
+All notable changes to this project are documented in this file.
+This changelog contains no emojis in accordance with project versioning standards.
+
+## [1.5] - 2026-10-21
+
+### Optimizations and Stability
+- On-demand AI voice and audio drama initialization: neural voice models (Piper), SoundPool (50 SFX), and AudioTrack buffers are no longer instantiated at application launch, but loaded strictly upon opening the Reader screen to eliminate startup latency and memory overhead.
+- Enhanced CrashHandler: intercepts uncaught exceptions immediately at startup and writes diagnostics directly to Android/data/com.karlitodev.novelize/logs/crash.txt and crah.txt for easy inspection.
+- Advanced code shrinking and R8 obfuscation protection with dedicated keep rules for Navigation 3 (NavKey) serialization to protect intellectual property while ensuring runtime stability.
+- Configured maxSdk to 37 and secured activity lifecycle initialization.
 
 ## [1.4] - 2026-10-21
 
-### Nouveautes
-- Ecran "Notes de Version" integre directement dans l'application, accessible depuis les Parametres, affichant l'historique complet de toutes les versions sans aucun emoji.
-- Suppression automatique des anciens builds GitHub Actions : seuls les 10 runs les plus recents sont conserves, les autres sont effaces via l'API GitHub.
+### New Features
+- In-app Release Notes screen integrated directly into Settings, showing complete version history without emojis.
+- Automated deletion of stale GitHub Actions builds: retains only the 10 most recent runs, pruning older records via the GitHub API.
 
-### Corrections et Optimisations
-- Correction de l'erreur de compilation R8 causee par la classe manquante com.gemalto.jp2.JP2Decoder (filtre JPX optionnel de PDFBox-Android non present sur Android). Resolution via regles ProGuard -dontwarn.
-- Ajout de regles -keep pour ONNX Runtime et ML Kit afin d'eviter toute suppression accidentelle par le minificateur R8.
-- Correction de la version codee en dur dans la bibliotheque (passage de 1.2 a 1.3, puis 1.4) pour synchroniser correctement le badge de nouveaute au demarrage.
-- Notes de version affichees en anglais par defaut.
+### Bug Fixes and Optimizations
+- Resolved R8 compilation failure caused by missing optional class com.gemalto.jp2.JP2Decoder in PDFBox-Android. Fixed using ProGuard -dontwarn rules.
+- Added -keep rules for ONNX Runtime and ML Kit to prevent accidental removal by R8 minification.
+- Corrected hardcoded version string in library screen to synchronize changelog notification dialog on launch.
+- Defaulted release notes display to English.
 
 ## [1.3] - 2026-10-21
 
-### Nouveautes
-- Detection multilingue par expressions regulieres (Regex) du genre des personnages (masculin et feminin) pour les langues francaise (FR), japonaise (JP), coreenne (KR) et anglaise (EN).
-- Attribution dynamique de 4 voix de personnages distinctes (2 voix masculines : MALE_1 et MALE_2, 2 voix feminines : FEMALE_1 et FEMALE_2) en plus du narrateur, avec reglages acoustiques differencies de hauteur tonale (pitch) et de cadence.
-- Extension du moteur vocal neural local et IA (Piper) pour supporter les modeles de voix secondaires masculins et feminins en francais et en anglais.
+### New Features
+- Multilingual Regex gender detection (male and female characters) for French (FR), Japanese (JP), Korean (KR), and English (EN).
+- Dynamic assignment of 4 distinct character voice profiles (2 male voices: MALE_1 and MALE_2; 2 female voices: FEMALE_1 and FEMALE_2) in addition to the narrator, each with customized pitch and cadence modulation.
+- Extended local neural voice engine (Piper) supporting secondary male and female voice models in French and English.
 
-### Corrections et Optimisations
-- Correction de l'importation de la bibliotheque PDFBox-Android (com.tom_roush.pdfbox) resolvant l'erreur de compilation en integration continue.
+### Bug Fixes and Optimizations
+- Resolved PDFBox-Android library imports, fixing continuous integration build issues.
 
 ## [1.2] - 2026-10-21
 
-### Nouveautes
-- Controles multimedia complets dans la barre d'etat, la zone de notification et l'ecran de verrouillage Android via MediaSessionCompat et NotificationCompat.MediaStyle (lecture, pause, phrase precedente, phrase suivante).
-- Support natif des documents PDF avec extraction de texte et generation automatique de couverture via PdfRenderer et PDFBox-Android.
-- Support natif des bandes dessinees et mangas au format archive CBZ avec extraction de couverture.
-- Support natif des fichiers texte Markdown (.md, .markdown) avec hierarchisation des titres de chapitres.
-- Support ameliore des fichiers EPUB avec analyse structuree du fichier de manifeste container.xml et de l'ordre de lecture du spine (.opf).
-- Extraction et affichage automatique de la premiere page ou de la couverture integree pour tous les formats compatibles.
-- Possibilite pour l'utilisateur de definir et remplacer manuellement la couverture de n'importe quel livre a partir de la galerie d'images.
-- Option de suppression directe des livres importes de la bibliotheque.
-- Module de gestion des incidents et crashs (CrashHandler) generant un rapport technique detaille crash.txt et permettant son envoi direct par WhatsApp aux developpeurs.
-- Synchronisation intelligente des effets sonores (SFX) depuis le depot GitHub avec verification d'integrite pour eviter tout re-telechargement de fichiers deja presents.
-- Messages d'information et d'accueil personnalises selon la langue utilisateur ("Yo ! Y a de nouveaux sons...", "Yo ! Une nouvelle mise a jour est disponible...").
-- Reprise de lecture intelligente : mise en surbrillance clignotante du texte ou la lecture s'est arretee et assombrissement temporaire de l'interface pour guider l'attention.
+### New Features
+- Full multimedia controls in status bar, notification shade, and lock screen via MediaSessionCompat and NotificationCompat.MediaStyle (play, pause, previous sentence, next sentence).
+- Native support for PDF documents with text extraction and automatic cover rendering via PdfRenderer and PDFBox-Android.
+- Native support for comic and manga CBZ archives with embedded cover extraction.
+- Native support for Markdown text files (.md, .markdown) with chapter heading detection.
+- Enhanced EPUB parsing with container.xml manifest inspection and .opf spine reading order resolution.
+- Automatic extraction and display of first-page or embedded covers for all supported formats.
+- Manual custom cover replacement for any library book directly from device image picker.
+- Direct book removal option from the library bookshelf.
+- Integrated CrashHandler diagnostic reporting saving crash.txt with one-tap WhatsApp sharing to developers.
+- Intelligent SFX synchronization from GitHub with integrity checks to prevent redundant downloads.
+- Localized welcoming toasts and notification banners matching user language.
+- Smart resume reading: flashing highlight on the last spoken phrase with screen focus dimming.
 
-### Corrections et Optimisations
-- Suppression des 32 effets sonores synthetiques generes par python dans les ressources locales et du depot GitHub afin d'ameliorer la qualite audio.
-- Conservation et integration des 18 effets sonores reels de qualite studio (combat, magie, interactions).
-- Remplacement du synthetiseur vocal synthetique par le moteur TextToSpeech systeme natif d'Android, personnalise par role vocal (hauteur de voix et cadence distinctes pour le narrateur, le heros, les personnages feminins et masculins).
-- Refonte des regles de detection des effets sonores pour empecher les faux positifs sur les mots du quotidien (suppression de correspondances erronnees).
-- Ajout d'une periode de reinitialisation (cooldown) empechant la repetition abusive d'un meme bruitage a moins de 8 paragraphes d'intervalle.
-- Publication directe de l'application au format APK sur GitHub Releases sans compression ZIP pour permettre la mise a jour automatique integree.
-- Correction du redimensionnement de l'animation de presentation au demarrage.
+### Bug Fixes and Optimizations
+- Removed 32 synthetic python-generated sound effects from repository to improve audio fidelity.
+- Preserved 18 studio-grade physical sound effects (combat, magic, interactions).
+- Replaced synthetic voice engine with Android system TextToSpeech modulated by character role.
+- Redesigned SFX detection keywords to eliminate false positives on common words.
+- Added cooldown interval preventing repeated sound effects within 8 paragraphs.
+- Published direct signed APK on GitHub Releases without ZIP wrapping for seamless self-updates.
+- Corrected splash entrance animation scaling on launch.
 
 ## [1.1] - 2026-10-21
 
-### Ajouts
-- Integration du processus d'installation assistee (Wizard) a executer une seule fois a la premiere ouverture.
-- Verification automatique et silencieuse des mises a jour disponibles via GitHub Releases.
-- Amelioration de la stabilite du service de lecture audio en arriere-plan.
+### Additions
+- Setup Wizard executed once on initial application launch.
+- Silent background update detection via GitHub Releases API.
+- Improved background narration playback service stability.

@@ -16,3 +16,7 @@ build/
 scratch/
 .kotlin/
 screenshots/
+/logs
+
+/crash/
+/scratch/
